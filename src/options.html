@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>划词翻译卡片 · 设置</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg:#f7f7fb; --card:#ffffff; --fg:#1f2937; --muted:#6b7280;
+      --border:#e5e7eb; --accent:#6366f1; --chip:#f3f4f6; --ok:#16a34a; --err:#ef4444;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#15171f; --card:#1f2330; --fg:#e7e9ee; --muted:#9aa0ac; --border:#343a4a; --accent:#818cf8; --chip:#2a2f3d; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 32px 16px; background: var(--bg); color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 14px; line-height: 1.6;
+    }
+    .wrap { max-width: 640px; margin: 0 auto; }
+    h1 { font-size: 20px; display: flex; align-items: center; gap: 10px; margin: 0 0 4px; }
+    .badge { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .sub { color: var(--muted); margin: 0 0 22px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
+    .card h2 { font-size: 14px; margin: 0 0 14px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+    .field { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; }
+    .field + .field { border-top: 1px dashed var(--border); }
+    .field label { flex: 1; }
+    .field .desc { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+    input[type="text"], input[type="password"], select {
+      padding: 7px 9px; border-radius: 9px; border: 1px solid var(--border);
+      background: var(--chip); color: var(--fg); font-size: 13px; min-width: 200px;
+    }
+    input[type="text"], input[type="password"] { width: 260px; }
+    .switch { position: relative; width: 42px; height: 24px; flex: none; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: var(--border); border-radius: 999px; transition: .2s; cursor: pointer; }
+    .slider::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; transition: .2s; }
+    .switch input:checked + .slider { background: var(--accent); }
+    .switch input:checked + .slider::before { transform: translateX(18px); }
+    .hidden { display: none; }
+    .test { display: flex; gap: 8px; margin-top: 4px; }
+    .test input { flex: 1; }
+    button {
+      padding: 8px 14px; border: none; border-radius: 9px; cursor: pointer;
+      background: var(--accent); color: #fff; font-size: 13px; font-weight: 500;
+    }
+    button.ghost { background: var(--chip); color: var(--fg); border: 1px solid var(--border); }
+    button:hover { opacity: .92; }
+    .result { margin-top: 10px; padding: 10px 12px; border-radius: 9px; background: var(--chip);
+      white-space: pre-wrap; word-break: break-word; min-height: 20px; }
+    .result.err { color: var(--err); }
+    .saved { color: var(--ok); font-size: 12px; opacity: 0; transition: opacity .2s; }
+    .saved.show { opacity: 1; }
+    a { color: var(--accent); }
+    .note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1><span class="badge">译</span>划词翻译卡片 <span class="saved" id="saved">已保存 ✓</span></h1>
+    <p class="sub">选中网页文字 → 原地卡片翻译。所有设置自动保存并同步。</p>
+
+    <div class="card">
+      <h2>常规</h2>
+      <div class="field">
+        <label for="targetLang">目标语言<span class="desc">把选中的文字翻译成这个语言</span></label>
+        <select id="targetLang"></select>
+      </div>
+      <div class="field">
+        <label for="triggerMode">触发方式</label>
+        <select id="triggerMode">
+          <option value="button">选中后显示翻译按钮</option>
+          <option value="auto">选中后立即翻译</option>
+          <option value="off">仅用快捷键 / 右键菜单</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="theme">主题</label>
+        <select id="theme">
+          <option value="auto">跟随系统</option>
+          <option value="light">浅色</option>
+          <option value="dark">深色</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="showOriginal">卡片显示原文</label>
+        <span class="switch"><input type="checkbox" id="showOriginal" /><span class="slider"></span></span>
+      </div>
+      <div class="field">
+        <label for="enableTTS">显示朗读按钮</label>
+        <span class="switch"><input type="checkbox" id="enableTTS" /><span class="slider"></span></span>
+      </div>
+      <div class="field">
+        <label for="lensEnabled">悬停阅读透镜<span class="desc">鼠标划过段落即在下方显示译文（用快速引擎，开销低）</span></label>
+        <span class="switch"><input type="checkbox" id="lensEnabled" /><span class="slider"></span></span>
+      </div>
+      <div class="field">
+        <label for="contextAware">上下文翻译<span class="desc">连同所在段落一起送给模型消歧，更准（仅大模型引擎生效）</span></label>
+        <span class="switch"><input type="checkbox" id="contextAware" /><span class="slider"></span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>翻译引擎</h2>
+      <div class="field">
+        <label for="provider">引擎<span class="desc">微软免费且国内可直连；DeepL / 大模型质量更高</span></label>
+        <select id="provider">
+          <option value="bing">微软翻译（免费，国内可用，开箱即用）</option>
+          <option value="google">Google（免费，需可访问谷歌）</option>
+          <option value="deepl">DeepL</option>
+          <option value="openai">大模型 / OpenAI 兼容接口</option>
+        </select>
+      </div>
+
+      <!-- DeepL -->
+      <div id="deeplSection" class="hidden">
+        <div class="field">
+          <label for="deeplKey">DeepL API Key</label>
+          <input type="password" id="deeplKey" placeholder="xxxxxxxx-xxxx-..." />
+        </div>
+        <div class="field">
+          <label for="deeplPro">使用 Pro 接口<span class="desc">关=免费版 api-free.deepl.com</span></label>
+          <span class="switch"><input type="checkbox" id="deeplPro" /><span class="slider"></span></span>
+        </div>
+        <p class="note">免费 Key 可在 <a href="https://www.deepl.com/pro-api" target="_blank" rel="noreferrer">deepl.com/pro-api</a> 申请。</p>
+      </div>
+
+      <!-- OpenAI-compatible -->
+      <div id="openaiSection" class="hidden">
+        <div class="field">
+          <label for="openaiBaseUrl">接口地址 (Base URL)<span class="desc">支持 OpenAI / OpenRouter / Ollama / 自建</span></label>
+          <input type="text" id="openaiBaseUrl" placeholder="https://api.openai.com/v1" />
+        </div>
+        <div class="field">
+          <label for="openaiModel">模型</label>
+          <input type="text" id="openaiModel" placeholder="gpt-4o-mini" />
+        </div>
+        <div class="field">
+          <label for="openaiKey">API Key<span class="desc">本地模型可留空</span></label>
+          <input type="password" id="openaiKey" placeholder="sk-..." />
+        </div>
+        <p class="note">
+          自定义域名需要授权访问权限：
+          <button class="ghost" id="grantBtn" type="button">授权该接口域名</button>
+          <span id="grantStatus"></span>
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>测试翻译</h2>
+      <div class="test">
+        <input type="text" id="testInput" placeholder="输入一句话测试当前引擎…" value="Hello, world!" />
+        <button id="testBtn" type="button">翻译</button>
+      </div>
+      <div class="result" id="testResult"></div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
