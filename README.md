@@ -9,7 +9,7 @@
     <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-4285F4?style=flat-square">
     <img alt="Chrome / Edge" src="https://img.shields.io/badge/Chrome%20%2F%20Edge-supported-34A853?style=flat-square">
     <img alt="No server" src="https://img.shields.io/badge/backend-not%20required-111827?style=flat-square">
-    <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-7C3AED?style=flat-square">
+    <img alt="Version" src="https://img.shields.io/badge/version-1.1.0-7C3AED?style=flat-square">
   </p>
 
   <p>
@@ -23,6 +23,14 @@
 | Hover Lens · 悬停阅读透镜 | Translation Card · 翻译卡片 |
 | --- | --- |
 | <img src="img/透镜.png" width="520" alt="Hover lens screenshot"> | <img src="img/卡片.png" width="360" alt="Translation card screenshot"> |
+
+## What's New · v1.1.0 更新亮点
+
+- **多引擎对照 · Multi-engine compare**：卡片上点「对照」按钮，并排比较微软 / Google / DeepL / 大模型的译文，各自标注耗时，一眼看出哪个译得好。Compare several engines at once, side by side, each with its latency.
+- **生词本 · Vocabulary book**：一键收藏词句到本地，独立管理页支持搜索、排序、备注、朗读，并可导出 CSV / Anki 或备份恢复 JSON。Save words with one click; search, sort, annotate, pronounce, and export to CSV / Anki / JSON.
+- **复习模式 · Spaced-repetition review**：内置 Leitner 记忆卡片，认识 / 不认识两键复习（支持键盘），把生词本变成学习工具。Built-in flashcard review with spaced repetition.
+- **AI 解释 · AI explain**：基于大模型流式输出词义、词性语法与例句，结合上下文消歧。Streamed LLM explanation (meaning / grammar / example) using the surrounding context.
+- **更快 · Faster**：Service Worker 内译文缓存 + 悬停预取，重复翻译"秒出"、零网络。In-worker translation cache plus hover-prefetch make repeat lookups instant.
 
 ## Highlights · 核心特性
 
@@ -79,6 +87,10 @@ After updating the code, click the extension's refresh button on the extensions 
 | Pin card · 点击图钉 | Keep the current card and open a new one for the next selection. 固定当前卡片，之后划词会打开新卡片 |
 | Change target language · 切换目标语言 | Re-translate immediately from the language dropdown. 选择语言后立即重译 |
 | Copy / Speak · 复制 / 朗读 | Copy translated text or read it with browser TTS. 复制译文或朗读译文 |
+| Compare · 对照 | Compare several engines side by side. 点「对照」并排比较多引擎译文 |
+| Save · 收藏 | Save to the vocabulary book (bookmark icon). 点书签收藏到生词本 |
+| Explain · 解释 | Stream an AI explanation in context (✦ icon). 点 ✦ 获取 AI 词义 / 语法 / 例句解释 |
+| Review · 复习 | Open the vocabulary book → 复习 for spaced-repetition flashcards. 在生词本里点「复习」做记忆卡片 |
 | `Esc` / Close · 关闭按钮 | Close the active card or a specific card. 关闭当前活动卡片或单张卡片 |
 
 The toolbar popup lets you quickly change the target language, trigger mode, and provider. The full options page includes API keys, theme, TTS, source text display, and context-aware translation.
@@ -121,10 +133,14 @@ translate-card/
 ├─ manifest.json                 # MV3 extension manifest · 扩展配置
 ├─ src/
 │  ├─ data.js                    # Languages and defaults · 语言列表和默认设置
-│  ├─ translators.js             # Provider implementations · 各翻译引擎实现
+│  ├─ translators.js             # Provider impls + AI explain stream · 各引擎 + AI 解释流式
+│  ├─ cache.js                   # In-worker translation LRU cache · 译文缓存
 │  ├─ background.js              # Service Worker, messages, menus, shortcuts
 │  ├─ content-styles.js          # Shadow DOM card styles · 卡片样式
 │  ├─ content.js                 # Selection detection and card UI · 划词检测和卡片 UI
+│  ├─ vocab.js                   # Vocabulary store + spaced repetition · 生词本存储 + 复习调度
+│  ├─ vocab.html / vocab-app.js  # Vocabulary manager page · 生词本管理页
+│  ├─ review.html / review-app.js # Flashcard review page · 复习卡片页
 │  ├─ popup.html / popup.js      # Toolbar popup · 工具栏弹窗
 │  └─ options.html / options.js  # Full options page · 完整设置页
 ├─ icons/                        # Extension icons · 扩展图标

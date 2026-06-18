@@ -189,8 +189,84 @@ async function tcOpenAITranslate(text, target, settings, context) {
   return { text: out.content.trim(), detected: '', provider: 'openai' };
 }
 
-/** Dispatch to the configured provider. `context` is used by LLM engines only. */
-async function tcTranslate(text, target, settings, context) {
+/**
+ * Stream an AI explanation of a word/phrase in its context from the OpenAI-
+ * compatible endpoint (stream:true). Calls onDelta(text) for each content
+ * chunk. Driven by the card's 解释 action over a long-lived Port so the worker
+ * stays alive for the whole stream.
+ */
+async function tcExplainStream(text, target, settings, context, onDelta) {
+  const key = (settings.openaiKey || '').trim();
+  const base = (settings.openaiBaseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const model = settings.openaiModel || 'gpt-4o-mini';
+  const targetName = typeof tcLangName === 'function' ? tcLangName(target) : target;
+
+  const system =
+    `You are a concise bilingual dictionary and language tutor. Explain the user's ` +
+    `WORD/PHRASE as used in the given context. Write the whole explanation in ${targetName}. ` +
+    `Output plain text only — no markdown symbols. Use exactly these labeled lines, ` +
+    `each on its own line:\n` +
+    `含义：<meaning in this context>\n` +
+    `词性/语法：<part of speech + a short grammar note>\n` +
+    `例句：<one short example sentence using it> — <its ${targetName} translation>\n` +
+    `Keep it brief. Do not translate the whole context.`;
+  const user =
+    context && context.trim() && context.trim() !== text.trim()
+      ? `Context:\n${context}\n\nWord/Phrase:\n${text}`
+      : `Word/Phrase:\n${text}`;
+
+  const res = await fetch(`${base}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(key ? { Authorization: `Bearer ${key}` } : {}),
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.3,
+      stream: true,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }),
+  });
+  if (!res.ok || !res.body) {
+    let msg = `大模型接口返回 ${res.status}`;
+    try {
+      const err = await res.json();
+      if (err && err.error && err.error.message) msg += `：${err.error.message}`;
+    } catch (_) { /* ignore */ }
+    throw new Error(msg);
+  }
+
+  // Parse the SSE stream: lines of `data: {json}`, terminated by `data: [DONE]`.
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || ''; // keep the trailing partial line
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const payload = trimmed.slice(5).trim();
+      if (payload === '[DONE]') return;
+      try {
+        const json = JSON.parse(payload);
+        const delta =
+          json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
+        if (delta) onDelta(delta);
+      } catch (_) { /* ignore keep-alives / partial chunks */ }
+    }
+  }
+}
+
+/** Route to the configured provider. `context` is used by LLM engines only. */
+function tcDispatch(text, target, settings, context) {
   switch (settings.provider) {
     case 'google':
       return tcGoogleTranslate(text, target);
@@ -204,4 +280,25 @@ async function tcTranslate(text, target, settings, context) {
   }
 }
 
+/**
+ * Cached translation. A repeat of the same (provider, target, text) returns
+ * instantly with no network request — the core of the "fast" experience and
+ * the shared substrate the multi-engine compare mode builds on.
+ *
+ * Only LLM results depend on `context`, so only those fold it into the key;
+ * deterministic engines (Bing/Google/DeepL) cache purely by text+target.
+ */
+async function tcTranslate(text, target, settings, context) {
+  const keyCtx = settings.provider === 'openai' ? context : '';
+  const key = tcCacheKey(settings.provider, target, text, keyCtx);
+
+  const cached = tcCacheGet(key);
+  if (cached) return { ...cached, cached: true };
+
+  const result = await tcDispatch(text, target, settings, context);
+  tcCacheSet(key, result); // only successful results reach here
+  return result;
+}
+
 globalThis.tcTranslate = tcTranslate;
+globalThis.tcExplainStream = tcExplainStream;

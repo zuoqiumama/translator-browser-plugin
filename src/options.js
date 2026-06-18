@@ -48,6 +48,21 @@
     });
   }
 
+  // --- Multi-engine compare selection (stored as an array, handled separately) ---
+  const cmpBoxes = Array.from(document.querySelectorAll('input[data-cmp]'));
+  const cmpSelected = new Set(settings.compareProviders || []);
+  for (const box of cmpBoxes) box.checked = cmpSelected.has(box.dataset.cmp);
+  for (const box of cmpBoxes) {
+    box.addEventListener('change', () => {
+      const chosen = cmpBoxes.filter((b) => b.checked).map((b) => b.dataset.cmp);
+      chrome.storage.sync.set({ compareProviders: chosen });
+      flashSaved();
+    });
+  }
+
+  $('openVocab').addEventListener('click', () =>
+    chrome.tabs.create({ url: chrome.runtime.getURL('src/vocab.html') }));
+
   function updateSections() {
     $('deeplSection').classList.toggle('hidden', fields.provider.value !== 'deepl');
     $('openaiSection').classList.toggle('hidden', fields.provider.value !== 'openai');

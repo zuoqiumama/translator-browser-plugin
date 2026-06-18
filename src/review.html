@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>复习 · 划词翻译卡片</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg:#f7f7fb; --card:#ffffff; --fg:#1f2937; --muted:#6b7280;
+      --border:#e5e7eb; --accent:#6366f1; --chip:#f3f4f6; --ok:#16a34a; --err:#ef4444;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#15171f; --card:#1f2330; --fg:#e7e9ee; --muted:#9aa0ac; --border:#343a4a; --accent:#818cf8; --chip:#2a2f3d; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:28px 16px; background:var(--bg); color:var(--fg);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+      font-size:14px; line-height:1.6; }
+    .wrap { max-width:560px; margin:0 auto; }
+    .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+    .back { color:var(--accent); text-decoration:none; font-size:14px; }
+    .back:hover { text-decoration:underline; }
+    .progress { color:var(--muted); font-size:13px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:18px;
+      padding:40px 28px; min-height:240px; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; text-align:center; gap:14px; }
+    .card.flip { cursor:default; }
+    .card:not(.flip) { cursor:pointer; }
+    .word { font-size:30px; font-weight:700; word-break:break-word; }
+    .hint { color:var(--muted); font-size:13px; }
+    .divider { width:100%; border-top:1px solid var(--border); }
+    .answer { font-size:21px; word-break:break-word; }
+    .note { color:var(--fg); font-size:13.5px; background:var(--chip); padding:5px 11px; border-radius:9px; word-break:break-word; }
+    .ctx { color:var(--muted); font-size:13px; word-break:break-word; }
+    .meta { color:var(--muted); font-size:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+    .pill { background:var(--chip); border-radius:6px; padding:1px 7px; }
+    .actions { display:flex; gap:10px; margin-top:18px; justify-content:center; }
+    button { padding:12px 16px; border:none; border-radius:11px; cursor:pointer;
+      color:#fff; font-size:15px; font-weight:600; background:var(--accent); }
+    button:hover { opacity:.93; }
+    .actions button { flex:1; max-width:190px; }
+    .ghost { background:var(--chip); color:var(--fg); border:1px solid var(--border); font-weight:500; }
+    .again { background:var(--err); }
+    .good { background:var(--ok); }
+    .done { text-align:center; padding:56px 16px; }
+    .done .big { font-size:44px; margin-bottom:8px; }
+    .done .msg { color:var(--muted); margin-bottom:22px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a class="back" href="vocab.html">← 生词本</a>
+      <span class="progress" id="progress"></span>
+    </div>
+    <div id="stage"></div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="vocab.js"></script>
+  <script src="review-app.js"></script>
+</body>
+</html>

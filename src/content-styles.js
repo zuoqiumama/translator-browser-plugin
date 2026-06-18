@@ -79,7 +79,7 @@ var TC_CSS = `
 .tc-card {
   position: fixed;
   z-index: 2147483647;
-  width: 340px;
+  width: 360px;
   max-width: calc(100vw - 24px);
   color: var(--tc-fg);
   background: var(--tc-bg);
@@ -159,6 +159,27 @@ var TC_CSS = `
   user-select: text;
 }
 
+/* ---- AI explanation (streamed) ---- */
+.tc-explain {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--tc-divider);
+  font-size: 13.5px; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word;
+  user-select: text;
+  animation: tc-fade .18s ease;
+}
+.tc-explain::before {
+  content: 'AI 解释'; display: block;
+  font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  color: var(--tc-muted); margin-bottom: 5px;
+}
+.tc-explain.tc-error { color: #ef4444; }
+.tc-explain.tc-explain-loading::after {
+  content: '▍'; color: var(--tc-accent); margin-left: 1px;
+  animation: tc-blink 1s steps(1) infinite;
+}
+@keyframes tc-blink { 50% { opacity: 0; } }
+
 .tc-error { color: #ef4444; font-size: 14px; }
 .tc-retry {
   margin-left: 8px; color: var(--tc-accent);
@@ -203,6 +224,30 @@ var TC_CSS = `
   from { clip-path: inset(0 0 100% 0 round 9px); opacity: 0; transform: translateY(-5px); }
   to   { clip-path: inset(0 0 0 0 round 9px); opacity: 1; transform: translateY(0); }
 }
+
+/* ---- multi-engine compare ---- */
+.tc-iconbtn.tc-active { color: var(--tc-accent); background: var(--tc-hover); }
+.tc-iconbtn.tc-saved { color: var(--tc-accent); }
+.tc-iconbtn.tc-saved svg { fill: currentColor; }
+.tc-compare { display: flex; flex-direction: column; }
+.tc-engine-row { padding: 10px 0; }
+.tc-engine-row:first-child { padding-top: 2px; }
+.tc-engine-row + .tc-engine-row { border-top: 1px solid var(--tc-divider); }
+.tc-engine-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.tc-engine-name {
+  font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  color: var(--tc-muted);
+  background: var(--tc-hover);
+  padding: 1px 7px; border-radius: 6px;
+}
+.tc-engine-meta { font-size: 11px; color: var(--tc-faint); font-variant-numeric: tabular-nums; }
+.tc-engine-copy { width: 22px; height: 22px; margin-left: auto; }
+.tc-engine-copy svg { width: 14px; height: 14px; }
+.tc-engine-text {
+  font-size: 14.5px; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word; user-select: text;
+}
+.tc-engine-text.tc-error { font-size: 13px; }
 
 /* slim scrollbar */
 .tc-body::-webkit-scrollbar { width: 8px; }

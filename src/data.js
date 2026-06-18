@@ -38,6 +38,9 @@ function tcLangName(code) {
   return hit ? hit.en : code;
 }
 
+/** Short display names for engines, used by the multi-engine compare view. */
+var TC_PROVIDER_NAMES = { bing: '微软', google: 'Google', deepl: 'DeepL', openai: '大模型' };
+
 /** Default settings; merged with whatever the user has saved in storage.sync. */
 var TC_DEFAULTS = {
   provider: 'bing', // 'bing' | 'google' | 'deepl' | 'openai'  (bing is keyless & works in CN)
@@ -48,6 +51,7 @@ var TC_DEFAULTS = {
   enableTTS: true, // show the speak button
   lensEnabled: false, // hover-to-translate reading lens
   contextAware: false, // send the surrounding paragraph as context (LLM engines only)
+  compareProviders: ['bing', 'google'], // engines shown side-by-side in the card's 对照 mode
   // DeepL
   deeplKey: '',
   deeplPro: false, // true => api.deepl.com (paid), false => api-free.deepl.com
@@ -67,6 +71,7 @@ async function tcGetSettings() {
 // can rely on them regardless of how `var` hoisting is treated.
 if (typeof globalThis !== 'undefined') {
   globalThis.TC_LANGUAGES = TC_LANGUAGES;
+  globalThis.TC_PROVIDER_NAMES = TC_PROVIDER_NAMES;
   globalThis.TC_DEFAULTS = TC_DEFAULTS;
   globalThis.tcLangName = tcLangName;
   globalThis.tcGetSettings = tcGetSettings;

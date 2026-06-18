@@ -47,6 +47,9 @@
     check: '<path d="M20 6 9 17l-5-5"/>',
     pin: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
     close: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    compare: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/>',
+    save: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+    explain: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
   };
 
   const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
@@ -192,6 +195,9 @@
     triggerEl.style.left = left + 'px';
     triggerEl.style.top = top + 'px';
 
+    // The moment the cursor aims at the button, translate in the background so
+    // the result is cache-warm and the click feels instant (free engines only).
+    triggerEl.addEventListener('mouseenter', () => prefetchSelection(info));
     // Keep the selection alive when interacting with the button.
     triggerEl.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -207,6 +213,21 @@
     root.appendChild(triggerEl);
   }
 
+  // Pre-warm the worker cache for the current selection. Gated to keyless/free
+  // engines so paid providers (DeepL/OpenAI) never fire on a mere hover; the
+  // subsequent click then resolves from cache instead of the network.
+  function prefetchSelection(info) {
+    if (settings.provider !== 'bing' && settings.provider !== 'google') return;
+    chrome.runtime
+      .sendMessage({
+        type: 'tc-translate',
+        text: info.text,
+        target: settings.targetLang,
+        context: settings.contextAware ? info.context : undefined,
+      })
+      .catch(() => {});
+  }
+
   // --- Card --------------------------------------------------------------
 
   function createCardElement() {
@@ -216,6 +237,9 @@
       <div class="tc-head">
         <select class="tc-lang" title="目标语言"></select>
         <div class="tc-actions">
+          <button class="tc-iconbtn tc-save" title="收藏到生词本">${svg(ICONS.save)}</button>
+          <button class="tc-iconbtn tc-explain" title="AI 解释（词义 / 语法 / 例句）">${svg(ICONS.explain)}</button>
+          <button class="tc-iconbtn tc-compare" title="多引擎对照（并排比较各家译文）">${svg(ICONS.compare)}</button>
           <button class="tc-iconbtn tc-speak" title="朗读译文">${svg(ICONS.speak)}</button>
           <button class="tc-iconbtn tc-copy" title="复制译文">${svg(ICONS.copy)}</button>
           <button class="tc-iconbtn tc-pin" title="钉住（常驻，下次划词另开新卡片）">${svg(ICONS.pin)}</button>
@@ -225,6 +249,7 @@
       <div class="tc-body">
         <div class="tc-result"></div>
         <div class="tc-original" hidden></div>
+        <div class="tc-explain" hidden></div>
       </div>`;
 
     const select = el.querySelector('.tc-lang');
@@ -245,13 +270,168 @@
     select.addEventListener('change', () => {
       el._target = select.value;
       chrome.storage.sync.set({ targetLang: select.value }); // remember for next time
-      doTranslate(el);
+      refreshCard(el);
     });
+    el.querySelector('.tc-save').addEventListener('click', () => toggleSave(el));
+    el.querySelector('.tc-explain').addEventListener('click', () => toggleExplain(el));
+    el.querySelector('.tc-compare').addEventListener('click', () => toggleCompare(el));
     el.querySelector('.tc-copy').addEventListener('click', () => copyResult(el));
     el.querySelector('.tc-speak').addEventListener('click', () => speak(el));
     el.querySelector('.tc-pin').addEventListener('click', () => togglePin(el));
     el.querySelector('.tc-close').addEventListener('click', () => closeCard(el));
     enableDrag(el);
+  }
+
+  // Toggle this card between single-engine and side-by-side multi-engine compare.
+  function toggleCompare(el) {
+    el._compare = !el._compare;
+    const btn = el.querySelector('.tc-compare');
+    btn.classList.toggle('tc-active', el._compare);
+    btn.title = el._compare ? '对照：开（点按切回单引擎）' : '多引擎对照（并排比较各家译文）';
+    refreshCard(el);
+  }
+
+  // Save (or un-save) the current translation to the 生词本 (vocabulary book).
+  async function toggleSave(el) {
+    if (!el._result) return; // nothing translated yet
+    if (await tcVocabHas(el._text, el._target)) {
+      await tcVocabRemoveEntry(el._text, el._target);
+    } else {
+      await tcVocabAdd({
+        text: el._text,
+        translation: el._result,
+        target: el._target,
+        source: el._detected || '',
+        provider: el._provider || '',
+        context: el._context || '',
+        url: location.href,
+        title: document.title,
+      });
+    }
+    updateSaveState(el);
+  }
+
+  // Reflect whether this (text, target) is saved by filling the bookmark button.
+  function updateSaveState(el) {
+    const btn = el.querySelector('.tc-save');
+    if (!btn) return;
+    tcVocabHas(el._text, el._target)
+      .then((saved) => {
+        btn.classList.toggle('tc-saved', saved);
+        btn.title = saved ? '已收藏（点按移出生词本）' : '收藏到生词本';
+      })
+      .catch(() => {});
+  }
+
+  // --- AI explanation (streamed over a Port) -----------------------------
+
+  // Usable only with an OpenAI-compatible endpoint: a key, or a local endpoint.
+  function llmConfigured() {
+    if ((settings.openaiKey || '').trim()) return true;
+    return /\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])/.test(settings.openaiBaseUrl || '');
+  }
+
+  function setExplainActive(el, on) {
+    const btn = el.querySelector('.tc-explain');
+    if (btn) btn.classList.toggle('tc-active', on);
+  }
+
+  // Tear down any explanation state (called whenever the card re-translates).
+  function resetExplain(el) {
+    const panel = el.querySelector('.tc-explain');
+    if (panel) {
+      panel.hidden = true;
+      panel.classList.remove('tc-explain-loading', 'tc-error');
+      panel.textContent = '';
+    }
+    el._explainOpen = false;
+    el._explainDone = false;
+    el._explainText = '';
+    if (el._explainPort) {
+      try { el._explainPort.disconnect(); } catch (_) { /* ignore */ }
+      el._explainPort = null;
+    }
+    setExplainActive(el, false);
+  }
+
+  function toggleExplain(el) {
+    if (el._explainOpen) {
+      el.querySelector('.tc-explain').hidden = true;
+      el._explainOpen = false;
+      setExplainActive(el, false);
+    } else {
+      doExplain(el);
+    }
+  }
+
+  function doExplain(el) {
+    const panel = el.querySelector('.tc-explain');
+    panel.hidden = false;
+    el._explainOpen = true;
+    setExplainActive(el, true);
+    if (el._explainDone) return; // already streamed once — just re-show it
+
+    if (!llmConfigured()) {
+      panel.classList.remove('tc-explain-loading');
+      panel.classList.add('tc-error');
+      panel.textContent =
+        '请先在选项页配置「大模型 / OpenAI 兼容接口」（填 API Key 或本地接口），再使用 AI 解释。';
+      el._explainDone = true;
+      return;
+    }
+
+    panel.classList.remove('tc-error');
+    panel.classList.add('tc-explain-loading');
+    panel.textContent = '';
+    el._explainText = '';
+
+    let port;
+    try {
+      port = chrome.runtime.connect({ name: 'tc-explain' });
+    } catch (_) {
+      panel.classList.remove('tc-explain-loading');
+      panel.classList.add('tc-error');
+      panel.textContent = '无法连接扩展后台，请刷新页面后重试。';
+      el._explainDone = true;
+      return;
+    }
+    el._explainPort = port;
+
+    port.onMessage.addListener((m) => {
+      if (!m) return;
+      if (m.type === 'delta') {
+        el._explainText += m.delta;
+        panel.textContent = el._explainText;
+      } else if (m.type === 'done') {
+        panel.classList.remove('tc-explain-loading');
+        if (!el._explainText) panel.textContent = '（未获得解释内容）';
+        el._explainDone = true;
+        el._explainPort = null;
+        try { port.disconnect(); } catch (_) { /* ignore */ }
+      } else if (m.type === 'error') {
+        panel.classList.remove('tc-explain-loading');
+        if (!el._explainText) {
+          panel.classList.add('tc-error');
+          panel.textContent = '解释失败：' + m.error;
+        }
+        el._explainDone = true;
+        el._explainPort = null;
+        try { port.disconnect(); } catch (_) { /* ignore */ }
+      }
+    });
+    port.onDisconnect.addListener(() => {
+      panel.classList.remove('tc-explain-loading');
+      el._explainPort = null;
+    });
+
+    // Always send context for explanation (disambiguates meaning), independent
+    // of the translation-time contextAware toggle.
+    port.postMessage({
+      type: 'explain',
+      text: el._text,
+      target: el._target,
+      context: el._context || '',
+    });
   }
 
   // Pin = keep this card on the page; the reusable "active" slot is freed so the
@@ -275,7 +455,7 @@
     const margin = 8;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const cw = Math.min(340, vw - 24);
+    const cw = Math.min(360, vw - 24);
     el.style.width = cw + 'px';
 
     // Measure off-screen first so we can flip/clamp using the real height.
@@ -327,10 +507,15 @@
     el._context = info.context || '';
     el._target = el.querySelector('.tc-lang').value || settings.targetLang;
     positionCard(el, info.rect, isNew);
-    await doTranslate(el);
+    await refreshCard(el);
   }
 
-  async function doTranslate(el) {
+  // Translate (or re-translate) the card in whichever mode it is currently in.
+  function refreshCard(el) {
+    return el._compare ? doCompare(el) : doSingle(el);
+  }
+
+  async function doSingle(el) {
     renderLoading(el);
     try {
       const resp = await chrome.runtime.sendMessage({
@@ -347,15 +532,40 @@
     }
   }
 
+  async function doCompare(el) {
+    renderLoading(el);
+    const providers =
+      settings.compareProviders && settings.compareProviders.length
+        ? settings.compareProviders
+        : ['bing', 'google'];
+    try {
+      const resp = await chrome.runtime.sendMessage({
+        type: 'tc-translate-multi',
+        text: el._text,
+        target: el._target,
+        providers,
+        context: settings.contextAware ? el._context : undefined,
+      });
+      if (!resp) throw new Error('扩展无响应，请重试');
+      if (resp.error) throw new Error(resp.error);
+      renderCompare(el, el._text, resp.results || []);
+    } catch (e) {
+      renderError(el, (e && e.message) || '翻译失败');
+    }
+  }
+
   function renderLoading(el) {
     const r = el.querySelector('.tc-result');
     r.classList.remove('tc-error');
     r.innerHTML = '<span class="tc-loading"><span class="tc-spinner"></span>翻译中…</span>';
     el.querySelector('.tc-original').hidden = true;
+    resetExplain(el); // a new translation invalidates any prior explanation
   }
 
   function renderResult(el, original, resp) {
     el._result = resp.text;
+    el._provider = resp.provider || '';
+    el._detected = resp.detected || '';
     const r = el.querySelector('.tc-result');
     r.classList.remove('tc-error');
     r.textContent = resp.text; // textContent: never inject translated HTML
@@ -367,6 +577,77 @@
     } else {
       orig.hidden = true;
     }
+    updateSaveState(el);
+  }
+
+  // Render the side-by-side multi-engine view: one labeled row per engine, each
+  // with its latency (or "缓存"/"失败") and an individual copy button.
+  function renderCompare(el, original, results) {
+    const r = el.querySelector('.tc-result');
+    r.classList.remove('tc-error');
+    r.textContent = '';
+
+    const list = document.createElement('div');
+    list.className = 'tc-compare';
+    let primary = '';
+    let primaryProvider = '';
+    let primaryDetected = '';
+
+    for (const item of results) {
+      const row = document.createElement('div');
+      row.className = 'tc-engine-row';
+
+      const head = document.createElement('div');
+      head.className = 'tc-engine-head';
+      const name = document.createElement('span');
+      name.className = 'tc-engine-name';
+      name.textContent =
+        (typeof TC_PROVIDER_NAMES !== 'undefined' && TC_PROVIDER_NAMES[item.provider]) ||
+        item.provider;
+      const meta = document.createElement('span');
+      meta.className = 'tc-engine-meta';
+      meta.textContent = item.error ? '失败' : item.cached ? '缓存' : item.ms + 'ms';
+      head.appendChild(name);
+      head.appendChild(meta);
+
+      const text = document.createElement('div');
+      text.className = 'tc-engine-text';
+      if (item.error) {
+        text.classList.add('tc-error');
+        text.textContent = item.error;
+      } else {
+        text.textContent = item.text; // textContent: never inject translated HTML
+        if (!primary) {
+          primary = item.text;
+          primaryProvider = item.provider;
+          primaryDetected = item.detected || '';
+        }
+        const copy = document.createElement('button');
+        copy.className = 'tc-iconbtn tc-engine-copy';
+        copy.title = '复制';
+        copy.innerHTML = svg(ICONS.copy, 14);
+        copy.addEventListener('click', () => copyText(item.text, copy));
+        head.appendChild(copy);
+      }
+
+      row.appendChild(head);
+      row.appendChild(text);
+      list.appendChild(row);
+    }
+
+    r.appendChild(list);
+    el._result = primary; // header speak/copy act on the first successful engine
+    el._provider = primaryProvider;
+    el._detected = primaryDetected;
+
+    const orig = el.querySelector('.tc-original');
+    if (settings.showOriginal && original) {
+      orig.hidden = false;
+      orig.textContent = original;
+    } else {
+      orig.hidden = true;
+    }
+    updateSaveState(el);
   }
 
   function renderError(el, message) {
@@ -376,13 +657,17 @@
     const retry = document.createElement('span');
     retry.className = 'tc-retry';
     retry.textContent = '重试';
-    retry.addEventListener('click', () => doTranslate(el));
+    retry.addEventListener('click', () => refreshCard(el));
     r.appendChild(retry);
     el.querySelector('.tc-original').hidden = true;
   }
 
   function closeCard(el) {
     if (!el) return;
+    if (el._explainPort) {
+      try { el._explainPort.disconnect(); } catch (_) { /* ignore */ }
+      el._explainPort = null;
+    }
     cards.delete(el);
     if (activeCard === el) activeCard = null;
     el.remove();
@@ -428,8 +713,9 @@
     } catch (_) { /* ignore */ }
   }
 
-  async function copyResult(el) {
-    const text = el._result;
+  // Copy arbitrary text and flash a check on the given button. Shared by the
+  // header copy button and each compare-row copy button.
+  async function copyText(text, btn) {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
@@ -443,16 +729,21 @@
       try { document.execCommand('copy'); } catch (_) { /* ignore */ }
       ta.remove();
     }
-    const btn = el.querySelector('.tc-copy');
     if (btn) {
-      btn.innerHTML = svg(ICONS.check);
+      const prev = btn.innerHTML;
+      const size = btn.classList.contains('tc-engine-copy') ? 14 : 16;
+      btn.innerHTML = svg(ICONS.check, size);
       btn.classList.add('tc-ok');
       clearTimeout(btn._okTimer);
       btn._okTimer = setTimeout(() => {
-        btn.innerHTML = svg(ICONS.copy);
+        btn.innerHTML = prev;
         btn.classList.remove('tc-ok');
       }, 1300);
     }
+  }
+
+  function copyResult(el) {
+    return copyText(el._result, el.querySelector('.tc-copy'));
   }
 
   // --- Hover reading lens ------------------------------------------------

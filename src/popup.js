@@ -38,4 +38,9 @@
     if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage();
     else window.open(chrome.runtime.getURL('src/options.html'));
   });
+
+  document.getElementById('openVocab').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('src/vocab.html') });
+    window.close();
+  });
 })();

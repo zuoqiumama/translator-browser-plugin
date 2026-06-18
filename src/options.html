@@ -153,6 +153,35 @@
     </div>
 
     <div class="card">
+      <h2>多引擎对照</h2>
+      <p class="note" style="margin-top:0">在卡片上点「对照」按钮时，并排比较下列引擎的译文。DeepL / 大模型需先在上方填好 Key。</p>
+      <div class="field">
+        <label for="cmp-bing">微软翻译</label>
+        <span class="switch"><input type="checkbox" id="cmp-bing" data-cmp="bing" /><span class="slider"></span></span>
+      </div>
+      <div class="field">
+        <label for="cmp-google">Google</label>
+        <span class="switch"><input type="checkbox" id="cmp-google" data-cmp="google" /><span class="slider"></span></span>
+      </div>
+      <div class="field">
+        <label for="cmp-deepl">DeepL</label>
+        <span class="switch"><input type="checkbox" id="cmp-deepl" data-cmp="deepl" /><span class="slider"></span></span>
+      </div>
+      <div class="field">
+        <label for="cmp-openai">大模型 / OpenAI 兼容</label>
+        <span class="switch"><input type="checkbox" id="cmp-openai" data-cmp="openai" /><span class="slider"></span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>生词本</h2>
+      <div class="field">
+        <label>收藏的词句<span class="desc">本地保存，可搜索、删除、导出 CSV / Anki</span></label>
+        <button class="ghost" id="openVocab" type="button">打开生词本</button>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>测试翻译</h2>
       <div class="test">
         <input type="text" id="testInput" placeholder="输入一句话测试当前引擎…" value="Hello, world!" />
