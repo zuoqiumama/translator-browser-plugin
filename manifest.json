@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "划词翻译卡片 · Select to Translate",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "选中网页文字即在原地卡片翻译：多引擎对照、生词本（含间隔复习）、AI 解释，内置微软 / Google / DeepL / 大模型，主打轻量与速度。",
   "permissions": ["storage", "contextMenus"],
   "host_permissions": [

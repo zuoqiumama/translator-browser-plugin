@@ -36,15 +36,40 @@
   }
   updateSections();
 
+  // Serialize storage writes so a user can edit a field and immediately click
+  // "测试翻译" without the worker reading stale settings.
+  let saveQueue = Promise.resolve();
+  let lastSaveError = null;
+
+  function saveSettings(patch) {
+    const write = saveQueue.then(() => chrome.storage.sync.set(patch));
+    saveQueue = write.then(
+      () => {
+        lastSaveError = null;
+        flashSaved();
+      },
+      (error) => {
+        lastSaveError = error || new Error('保存失败');
+      },
+    );
+    return write;
+  }
+
+  async function flushSettings() {
+    await saveQueue;
+    if (lastSaveError) throw lastSaveError;
+  }
+
   // Auto-save handlers.
   for (const key in fields) {
     const el = fields[key];
-    const evt = el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input';
+    // Saving text inputs on every keystroke can hit chrome.storage.sync write
+    // quotas, especially for long API keys. "change" still auto-saves on blur.
+    const evt = 'change';
     el.addEventListener(evt, () => {
       const value = el.type === 'checkbox' ? el.checked : el.value;
-      chrome.storage.sync.set({ [key]: value });
+      saveSettings({ [key]: value }).catch(() => {});
       if (key === 'provider') updateSections();
-      flashSaved();
     });
   }
 
@@ -55,8 +80,7 @@
   for (const box of cmpBoxes) {
     box.addEventListener('change', () => {
       const chosen = cmpBoxes.filter((b) => b.checked).map((b) => b.dataset.cmp);
-      chrome.storage.sync.set({ compareProviders: chosen });
-      flashSaved();
+      saveSettings({ compareProviders: chosen }).catch(() => {});
     });
   }
 
@@ -65,7 +89,6 @@
 
   function updateSections() {
     $('deeplSection').classList.toggle('hidden', fields.provider.value !== 'deepl');
-    $('openaiSection').classList.toggle('hidden', fields.provider.value !== 'openai');
   }
 
   let savedTimer = null;
@@ -89,6 +112,8 @@
       return;
     }
     try {
+      // Keep request() directly in the click gesture; Chrome may reject
+      // permission prompts after awaiting unrelated asynchronous work.
       const granted = await chrome.permissions.request({ origins: [pattern] });
       status.textContent = granted ? ' 已授权 ✓' : ' 已拒绝';
     } catch (e) {
@@ -98,17 +123,19 @@
 
   // --- Test translation --------------------------------------------------
 
-  $('testBtn').addEventListener('click', async () => {
-    const out = $('testResult');
-    const text = $('testInput').value.trim();
+  async function testTranslation(inputId, resultId, provider) {
+    const out = $(resultId);
+    const text = $(inputId).value.trim();
     if (!text) return;
     out.classList.remove('err');
     out.textContent = '翻译中…';
     try {
+      await flushSettings();
       const resp = await chrome.runtime.sendMessage({
         type: 'tc-translate',
         text,
         target: fields.targetLang.value,
+        ...(provider ? { provider } : {}),
       });
       if (!resp || resp.error) throw new Error(resp ? resp.error : '无响应');
       out.textContent = resp.text;
@@ -116,5 +143,10 @@
       out.classList.add('err');
       out.textContent = (e && e.message) || '翻译失败';
     }
-  });
+  }
+
+  $('llmTestBtn').addEventListener('click', () =>
+    testTranslation('llmTestInput', 'llmTestResult', 'openai'));
+  $('testBtn').addEventListener('click', () =>
+    testTranslation('testInput', 'testResult'));
 })();

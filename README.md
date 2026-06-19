@@ -9,7 +9,7 @@
     <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-4285F4?style=flat-square">
     <img alt="Chrome / Edge" src="https://img.shields.io/badge/Chrome%20%2F%20Edge-supported-34A853?style=flat-square">
     <img alt="No server" src="https://img.shields.io/badge/backend-not%20required-111827?style=flat-square">
-    <img alt="Version" src="https://img.shields.io/badge/version-1.1.0-7C3AED?style=flat-square">
+    <img alt="Version" src="https://img.shields.io/badge/version-1.2.0-7C3AED?style=flat-square">
   </p>
 
   <p>
@@ -24,7 +24,15 @@
 | --- | --- |
 | <img src="img/透镜.png" width="520" alt="Hover lens screenshot"> | <img src="img/卡片.png" width="360" alt="Translation card screenshot"> |
 
-## What's New · v1.1.0 更新亮点
+## What's New · 更新亮点
+
+### v1.2.0
+
+- **流式翻译 · Streaming LLM translation**：大模型译文像打字一样逐字呈现，首字数百毫秒即出，告别整段空白等待。LLM translations now stream token-by-token — the first words appear in a few hundred ms instead of waiting for the whole result.
+- **更跟手、不浪费 · Snappier & no waste**：切换语言 / 关闭卡片 / 重新划词会立即中断在途请求；悬停预取与点击请求自动合流，全程只发一次模型调用，不重复计费。Switching language, closing the card, or re-selecting cancels the in-flight request instantly; a hover-prefetch coalesces with the click into a single model call.
+- **菜单不再被遮挡 · Overflow menu fix**：卡片「更多」菜单的层级修正，现在始终显示在卡片之上。The card's "more" menu now always renders above the card instead of behind it.
+
+### v1.1.0
 
 - **多引擎对照 · Multi-engine compare**：卡片上点「对照」按钮，并排比较微软 / Google / DeepL / 大模型的译文，各自标注耗时，一眼看出哪个译得好。Compare several engines at once, side by side, each with its latency.
 - **生词本 · Vocabulary book**：一键收藏词句到本地，独立管理页支持搜索、排序、备注、朗读，并可导出 CSV / Anki 或备份恢复 JSON。Save words with one click; search, sort, annotate, pronounce, and export to CSV / Anki / JSON.

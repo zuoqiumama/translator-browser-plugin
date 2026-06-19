@@ -28,20 +28,21 @@
     .card h2 { font-size: 14px; margin: 0 0 14px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
     .field { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; }
     .field + .field { border-top: 1px dashed var(--border); }
-    .field label { flex: 1; }
+    .field > label:not(.switch) { flex: 1; }
     .field .desc { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
     input[type="text"], input[type="password"], select {
       padding: 7px 9px; border-radius: 9px; border: 1px solid var(--border);
       background: var(--chip); color: var(--fg); font-size: 13px; min-width: 200px;
     }
     input[type="text"], input[type="password"] { width: 260px; }
-    .switch { position: relative; width: 42px; height: 24px; flex: none; }
-    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch { position: relative; width: 42px; height: 24px; flex: 0 0 42px; cursor: pointer; }
+    .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
     .slider { position: absolute; inset: 0; background: var(--border); border-radius: 999px; transition: .2s; cursor: pointer; }
     .slider::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
       background: #fff; border-radius: 50%; transition: .2s; }
     .switch input:checked + .slider { background: var(--accent); }
     .switch input:checked + .slider::before { transform: translateX(18px); }
+    .switch input:focus-visible + .slider { outline: 2px solid var(--accent); outline-offset: 2px; }
     .hidden { display: none; }
     .test { display: flex; gap: 8px; margin-top: 4px; }
     .test input { flex: 1; }
@@ -89,19 +90,19 @@
       </div>
       <div class="field">
         <label for="showOriginal">卡片显示原文</label>
-        <span class="switch"><input type="checkbox" id="showOriginal" /><span class="slider"></span></span>
+        <label class="switch"><input type="checkbox" id="showOriginal" /><span class="slider"></span></label>
       </div>
       <div class="field">
         <label for="enableTTS">显示朗读按钮</label>
-        <span class="switch"><input type="checkbox" id="enableTTS" /><span class="slider"></span></span>
+        <label class="switch"><input type="checkbox" id="enableTTS" /><span class="slider"></span></label>
       </div>
       <div class="field">
         <label for="lensEnabled">悬停阅读透镜<span class="desc">鼠标划过段落即在下方显示译文（用快速引擎，开销低）</span></label>
-        <span class="switch"><input type="checkbox" id="lensEnabled" /><span class="slider"></span></span>
+        <label class="switch"><input type="checkbox" id="lensEnabled" /><span class="slider"></span></label>
       </div>
       <div class="field">
         <label for="contextAware">上下文翻译<span class="desc">连同所在段落一起送给模型消歧，更准（仅大模型引擎生效）</span></label>
-        <span class="switch"><input type="checkbox" id="contextAware" /><span class="slider"></span></span>
+        <label class="switch"><input type="checkbox" id="contextAware" /><span class="slider"></span></label>
       </div>
     </div>
 
@@ -125,51 +126,66 @@
         </div>
         <div class="field">
           <label for="deeplPro">使用 Pro 接口<span class="desc">关=免费版 api-free.deepl.com</span></label>
-          <span class="switch"><input type="checkbox" id="deeplPro" /><span class="slider"></span></span>
+          <label class="switch"><input type="checkbox" id="deeplPro" /><span class="slider"></span></label>
         </div>
         <p class="note">免费 Key 可在 <a href="https://www.deepl.com/pro-api" target="_blank" rel="noreferrer">deepl.com/pro-api</a> 申请。</p>
       </div>
 
-      <!-- OpenAI-compatible -->
-      <div id="openaiSection" class="hidden">
-        <div class="field">
-          <label for="openaiBaseUrl">接口地址 (Base URL)<span class="desc">支持 OpenAI / OpenRouter / Ollama / 自建</span></label>
-          <input type="text" id="openaiBaseUrl" placeholder="https://api.openai.com/v1" />
-        </div>
-        <div class="field">
-          <label for="openaiModel">模型</label>
-          <input type="text" id="openaiModel" placeholder="gpt-4o-mini" />
-        </div>
-        <div class="field">
-          <label for="openaiKey">API Key<span class="desc">本地模型可留空</span></label>
-          <input type="password" id="openaiKey" placeholder="sk-..." />
-        </div>
-        <p class="note">
-          自定义域名需要授权访问权限：
-          <button class="ghost" id="grantBtn" type="button">授权该接口域名</button>
-          <span id="grantStatus"></span>
-        </p>
+      <p class="note">测试当前默认引擎的翻译效果：</p>
+      <div class="test">
+        <input type="text" id="testInput" placeholder="输入一句话测试当前引擎…" value="Hello, world!" />
+        <button id="testBtn" type="button">测试</button>
       </div>
+      <div class="result" id="testResult"></div>
+    </div>
+
+    <div class="card">
+      <h2>大模型配置</h2>
+      <p class="note" style="margin-top:0">
+        独立于默认翻译引擎。用于大模型默认翻译、多引擎对照中的大模型结果，以及 AI 解释。
+      </p>
+      <div class="field">
+        <label for="openaiBaseUrl">接口地址 (Base URL)<span class="desc">支持 OpenAI / OpenRouter / SiliconFlow / Ollama / 自建</span></label>
+        <input type="text" id="openaiBaseUrl" placeholder="https://api.openai.com/v1" />
+      </div>
+      <div class="field">
+        <label for="openaiModel">模型</label>
+        <input type="text" id="openaiModel" placeholder="gpt-4o-mini" />
+      </div>
+      <div class="field">
+        <label for="openaiKey">API Key<span class="desc">本地模型可留空</span></label>
+        <input type="password" id="openaiKey" placeholder="sk-..." />
+      </div>
+      <p class="note">
+        自定义域名需要授权访问权限：
+        <button class="ghost" id="grantBtn" type="button">授权该接口域名</button>
+        <span id="grantStatus"></span>
+      </p>
+      <div class="test">
+        <input type="text" id="llmTestInput" placeholder="输入一句话测试大模型配置…" value="Hello, world!" />
+        <button id="llmTestBtn" type="button">测试大模型</button>
+      </div>
+      <div class="result" id="llmTestResult"></div>
     </div>
 
     <div class="card">
       <h2>多引擎对照</h2>
-      <p class="note" style="margin-top:0">在卡片上点「对照」按钮时，并排比较下列引擎的译文。DeepL / 大模型需先在上方填好 Key。</p>
+      <p class="note" style="margin-top:0">在卡片的「更多操作」中开启对照，并排比较下列引擎。大模型使用上方独立配置，不受默认引擎影响。</p>
       <div class="field">
         <label for="cmp-bing">微软翻译</label>
-        <span class="switch"><input type="checkbox" id="cmp-bing" data-cmp="bing" /><span class="slider"></span></span>
+        <label class="switch"><input type="checkbox" id="cmp-bing" data-cmp="bing" /><span class="slider"></span></label>
       </div>
       <div class="field">
         <label for="cmp-google">Google</label>
-        <span class="switch"><input type="checkbox" id="cmp-google" data-cmp="google" /><span class="slider"></span></span>
+        <label class="switch"><input type="checkbox" id="cmp-google" data-cmp="google" /><span class="slider"></span></label>
       </div>
       <div class="field">
         <label for="cmp-deepl">DeepL</label>
-        <span class="switch"><input type="checkbox" id="cmp-deepl" data-cmp="deepl" /><span class="slider"></span></span>
+        <label class="switch"><input type="checkbox" id="cmp-deepl" data-cmp="deepl" /><span class="slider"></span></label>
       </div>
       <div class="field">
         <label for="cmp-openai">大模型 / OpenAI 兼容</label>
-        <span class="switch"><input type="checkbox" id="cmp-openai" data-cmp="openai" /><span class="slider"></span></span>
+        <label class="switch"><input type="checkbox" id="cmp-openai" data-cmp="openai" /><span class="slider"></span></label>
       </div>
     </div>
 
@@ -179,15 +195,6 @@
         <label>收藏的词句<span class="desc">本地保存，可搜索、删除、导出 CSV / Anki</span></label>
         <button class="ghost" id="openVocab" type="button">打开生词本</button>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>测试翻译</h2>
-      <div class="test">
-        <input type="text" id="testInput" placeholder="输入一句话测试当前引擎…" value="Hello, world!" />
-        <button id="testBtn" type="button">翻译</button>
-      </div>
-      <div class="result" id="testResult"></div>
     </div>
   </div>
 

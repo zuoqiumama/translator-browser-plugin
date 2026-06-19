@@ -133,19 +133,16 @@ async function tcDeeplTranslate(text, target, settings) {
 }
 
 /**
- * Any OpenAI-compatible chat endpoint. Works with OpenAI, OpenRouter, local
- * servers (Ollama/llama.cpp/vLLM), or your own model — just set baseUrl/model.
+ * Build the chat messages for a translation. Shared by the one-shot and the
+ * streaming OpenAI paths so both speak with exactly the same voice.
+ *
+ * When the caller supplies surrounding text, translate only the selection but
+ * use the context to disambiguate meaning (the LLM-only advantage).
  */
-async function tcOpenAITranslate(text, target, settings, context) {
-  const key = (settings.openaiKey || '').trim();
-  const base = (settings.openaiBaseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
-  const model = settings.openaiModel || 'gpt-4o-mini';
-  const targetName = (typeof tcLangName === 'function' ? tcLangName(target) : target);
-
-  // When the caller supplies surrounding text, translate only the selection but
-  // use the context to disambiguate meaning (the LLM-only advantage).
+function tcTranslateMessages(text, target, context) {
+  const targetName = typeof tcLangName === 'function' ? tcLangName(target) : target;
   const useCtx = context && context.trim() && context.trim() !== text.trim();
-  const messages = useCtx
+  return useCtx
     ? [
         {
           role: 'system',
@@ -166,6 +163,30 @@ async function tcOpenAITranslate(text, target, settings, context) {
         },
         { role: 'user', content: text },
       ];
+}
+
+/** Turn a non-OK OpenAI response into a user-friendly Error (best-effort detail). */
+async function tcOpenAIError(res) {
+  let msg = `大模型接口返回 ${res.status}`;
+  try {
+    const err = await res.json();
+    const detail =
+      err && ((err.error && err.error.message) || err.message || err.detail || err.error_description);
+    if (detail) msg += `：${detail}`;
+  } catch (_) { /* ignore parse errors */ }
+  return new Error(msg);
+}
+
+/**
+ * Any OpenAI-compatible chat endpoint. Works with OpenAI, OpenRouter, local
+ * servers (Ollama/llama.cpp/vLLM), or your own model — just set baseUrl/model.
+ * Non-streaming; kept for the multi-engine compare view (which renders engines
+ * as static rows). The single-card path uses the streaming variant below.
+ */
+async function tcOpenAITranslate(text, target, settings, context) {
+  const key = (settings.openaiKey || '').trim();
+  const base = (settings.openaiBaseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const model = settings.openaiModel || 'gpt-4o-mini';
 
   const res = await fetch(`${base}/chat/completions`, {
     method: 'POST',
@@ -173,20 +194,85 @@ async function tcOpenAITranslate(text, target, settings, context) {
       'Content-Type': 'application/json',
       ...(key ? { Authorization: `Bearer ${key}` } : {}),
     },
-    body: JSON.stringify({ model, temperature: 0.2, messages }),
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      messages: tcTranslateMessages(text, target, context),
+    }),
   });
-  if (!res.ok) {
-    let msg = `大模型接口返回 ${res.status}`;
-    try {
-      const err = await res.json();
-      if (err && err.error && err.error.message) msg += `：${err.error.message}`;
-    } catch (_) { /* ignore parse errors */ }
-    throw new Error(msg);
-  }
+  if (!res.ok) throw await tcOpenAIError(res);
   const data = await res.json();
   const out = data && data.choices && data.choices[0] && data.choices[0].message;
   if (!out || !out.content) throw new Error('大模型未返回内容');
   return { text: out.content.trim(), detected: '', provider: 'openai' };
+}
+
+/**
+ * Low-level streaming call to an OpenAI-compatible chat endpoint. Invokes
+ * onDelta(textChunk) as each token arrives and resolves to the full text.
+ * `signal` (an AbortController's) cancels the request and tears down the
+ * connection instantly — used to drop a stale translation the moment the user
+ * re-selects or closes the card. Shared by streaming translation and the AI
+ * explanation so the SSE parsing lives in exactly one place.
+ */
+async function tcOpenAIChatStream(messages, extraBody, settings, onDelta, signal) {
+  const key = (settings.openaiKey || '').trim();
+  const base = (settings.openaiBaseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const model = settings.openaiModel || 'gpt-4o-mini';
+
+  const res = await fetch(`${base}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(key ? { Authorization: `Bearer ${key}` } : {}),
+    },
+    body: JSON.stringify({ model, stream: true, ...extraBody, messages }),
+    signal,
+  });
+  if (!res.ok || !res.body) throw await tcOpenAIError(res);
+
+  // Parse the SSE stream: lines of `data: {json}`, terminated by `data: [DONE]`.
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let full = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || ''; // keep the trailing partial line
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const payload = trimmed.slice(5).trim();
+      if (payload === '[DONE]') return full;
+      try {
+        const json = JSON.parse(payload);
+        const delta =
+          json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
+        if (delta) {
+          full += delta;
+          onDelta(delta);
+        }
+      } catch (_) { /* ignore keep-alives / partial chunks */ }
+    }
+  }
+  return full;
+}
+
+/**
+ * Streaming translation over an OpenAI-compatible endpoint. Emits partial text
+ * through onDelta so the card fills in as the model writes — the core fix for
+ * "the LLM feels slow": the first words land in a few hundred ms instead of
+ * after the whole translation finishes.
+ */
+async function tcOpenAITranslateStream(text, target, settings, context, onDelta, signal) {
+  const messages = tcTranslateMessages(text, target, context);
+  const full = await tcOpenAIChatStream(messages, { temperature: 0.2 }, settings, onDelta, signal);
+  const out = (full || '').trim();
+  if (!out) throw new Error('大模型未返回内容');
+  return { text: out, detected: '', provider: 'openai' };
 }
 
 /**
@@ -195,10 +281,7 @@ async function tcOpenAITranslate(text, target, settings, context) {
  * chunk. Driven by the card's 解释 action over a long-lived Port so the worker
  * stays alive for the whole stream.
  */
-async function tcExplainStream(text, target, settings, context, onDelta) {
-  const key = (settings.openaiKey || '').trim();
-  const base = (settings.openaiBaseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
-  const model = settings.openaiModel || 'gpt-4o-mini';
+async function tcExplainStream(text, target, settings, context, onDelta, signal) {
   const targetName = typeof tcLangName === 'function' ? tcLangName(target) : target;
 
   const system =
@@ -215,54 +298,16 @@ async function tcExplainStream(text, target, settings, context, onDelta) {
       ? `Context:\n${context}\n\nWord/Phrase:\n${text}`
       : `Word/Phrase:\n${text}`;
 
-  const res = await fetch(`${base}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(key ? { Authorization: `Bearer ${key}` } : {}),
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.3,
-      stream: true,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-    }),
-  });
-  if (!res.ok || !res.body) {
-    let msg = `大模型接口返回 ${res.status}`;
-    try {
-      const err = await res.json();
-      if (err && err.error && err.error.message) msg += `：${err.error.message}`;
-    } catch (_) { /* ignore */ }
-    throw new Error(msg);
-  }
-
-  // Parse the SSE stream: lines of `data: {json}`, terminated by `data: [DONE]`.
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || ''; // keep the trailing partial line
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data:')) continue;
-      const payload = trimmed.slice(5).trim();
-      if (payload === '[DONE]') return;
-      try {
-        const json = JSON.parse(payload);
-        const delta =
-          json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
-        if (delta) onDelta(delta);
-      } catch (_) { /* ignore keep-alives / partial chunks */ }
-    }
-  }
+  await tcOpenAIChatStream(
+    [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ],
+    { temperature: 0.3 },
+    settings,
+    onDelta,
+    signal,
+  );
 }
 
 /** Route to the configured provider. `context` is used by LLM engines only. */
@@ -281,9 +326,17 @@ function tcDispatch(text, target, settings, context) {
 }
 
 /**
+ * In-flight non-streaming requests, keyed like the cache. Lets a later caller
+ * (e.g. the streamed click after a hover-prefetch) ride an identical request
+ * already running instead of issuing a second — duplicate — model call.
+ */
+const tcInflight = new Map();
+
+/**
  * Cached translation. A repeat of the same (provider, target, text) returns
  * instantly with no network request — the core of the "fast" experience and
- * the shared substrate the multi-engine compare mode builds on.
+ * the shared substrate the multi-engine compare mode builds on. Concurrent
+ * duplicates are coalesced onto a single in-flight request.
  *
  * Only LLM results depend on `context`, so only those fold it into the key;
  * deterministic engines (Bing/Google/DeepL) cache purely by text+target.
@@ -295,10 +348,50 @@ async function tcTranslate(text, target, settings, context) {
   const cached = tcCacheGet(key);
   if (cached) return { ...cached, cached: true };
 
-  const result = await tcDispatch(text, target, settings, context);
-  tcCacheSet(key, result); // only successful results reach here
+  const pending = tcInflight.get(key);
+  if (pending) return pending.then((r) => ({ ...r, cached: true }));
+
+  const p = (async () => {
+    const result = await tcDispatch(text, target, settings, context);
+    tcCacheSet(key, result); // only successful results reach here
+    return result;
+  })();
+  tcInflight.set(key, p);
+  try {
+    return await p;
+  } finally {
+    tcInflight.delete(key);
+  }
+}
+
+/**
+ * Cached, STREAMING translation for the single-card LLM path. A cache hit
+ * replays instantly as one delta (no network); a miss streams from the model
+ * and stores the finished text so re-opening the same selection is free. Shares
+ * tcTranslate's cache, so a value warmed by hover-prefetch or the compare view
+ * is reused here and resolves the click immediately.
+ */
+async function tcTranslateStream(text, target, settings, context, onDelta, signal) {
+  const key = tcCacheKey('openai', target, text, context || '');
+  const cached = tcCacheGet(key);
+  if (cached) {
+    onDelta(cached.text);
+    return { ...cached, cached: true };
+  }
+  // Coalesce with an identical in-flight request (typically a hover-prefetch):
+  // wait for it and replay its text as one delta rather than calling the model
+  // a second time.
+  const pending = tcInflight.get(key);
+  if (pending) {
+    const r = await pending;
+    onDelta(r.text);
+    return { ...r, cached: true };
+  }
+  const result = await tcOpenAITranslateStream(text, target, settings, context, onDelta, signal);
+  if (result.text) tcCacheSet(key, result);
   return result;
 }
 
 globalThis.tcTranslate = tcTranslate;
+globalThis.tcTranslateStream = tcTranslateStream;
 globalThis.tcExplainStream = tcExplainStream;

@@ -26,6 +26,7 @@
   // Pinned cards (card._pinned === true) stay until closed; all live in `cards`.
   let activeCard = null;
   const cards = new Set();
+  let openMenuCard = null; // the card whose overflow "⋯" menu is currently open
   let lastSelection = null; // { text, rect, endRect, context }
 
   // Hover reading lens state.
@@ -50,6 +51,7 @@
     compare: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/>',
     save: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
     explain: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+    more: '<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>',
   };
 
   const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
@@ -213,11 +215,15 @@
     root.appendChild(triggerEl);
   }
 
-  // Pre-warm the worker cache for the current selection. Gated to keyless/free
-  // engines so paid providers (DeepL/OpenAI) never fire on a mere hover; the
-  // subsequent click then resolves from cache instead of the network.
+  // Pre-warm the worker cache for the current selection. Aiming the cursor at
+  // the trigger button is a deliberate intent, so the LLM is warmed here too —
+  // the slow engine benefits most, and the cached result makes the click feel
+  // instant. DeepL stays excluded: it's already fast and purely paid, so a hover
+  // shouldn't spend its quota. (The trigger only exists in 'button' mode, so this
+  // never fires on a bare text selection.)
   function prefetchSelection(info) {
-    if (settings.provider !== 'bing' && settings.provider !== 'google') return;
+    const p = settings.provider;
+    if (p !== 'bing' && p !== 'google' && p !== 'openai') return;
     chrome.runtime
       .sendMessage({
         type: 'tc-translate',
@@ -237,12 +243,10 @@
       <div class="tc-head">
         <select class="tc-lang" title="目标语言"></select>
         <div class="tc-actions">
-          <button class="tc-iconbtn tc-save" title="收藏到生词本">${svg(ICONS.save)}</button>
-          <button class="tc-iconbtn tc-explain" title="AI 解释（词义 / 语法 / 例句）">${svg(ICONS.explain)}</button>
-          <button class="tc-iconbtn tc-compare" title="多引擎对照（并排比较各家译文）">${svg(ICONS.compare)}</button>
-          <button class="tc-iconbtn tc-speak" title="朗读译文">${svg(ICONS.speak)}</button>
+          <button class="tc-iconbtn tc-explainbtn" title="AI 解释（词义 / 语法 / 例句）">${svg(ICONS.explain)}</button>
           <button class="tc-iconbtn tc-copy" title="复制译文">${svg(ICONS.copy)}</button>
-          <button class="tc-iconbtn tc-pin" title="钉住（常驻，下次划词另开新卡片）">${svg(ICONS.pin)}</button>
+          <button class="tc-iconbtn tc-pin" title="钉住卡片">${svg(ICONS.pin)}</button>
+          <button class="tc-iconbtn tc-more" title="更多操作">${svg(ICONS.more)}</button>
           <button class="tc-iconbtn tc-close" title="关闭">${svg(ICONS.close)}</button>
         </div>
       </div>
@@ -260,8 +264,6 @@
       select.appendChild(opt);
     }
     select.value = settings.targetLang;
-
-    if (!settings.enableTTS) el.querySelector('.tc-speak').style.display = 'none';
     return el;
   }
 
@@ -272,22 +274,88 @@
       chrome.storage.sync.set({ targetLang: select.value }); // remember for next time
       refreshCard(el);
     });
-    el.querySelector('.tc-save').addEventListener('click', () => toggleSave(el));
-    el.querySelector('.tc-explain').addEventListener('click', () => toggleExplain(el));
-    el.querySelector('.tc-compare').addEventListener('click', () => toggleCompare(el));
+    el.querySelector('.tc-explainbtn').addEventListener('click', () => toggleExplain(el));
     el.querySelector('.tc-copy').addEventListener('click', () => copyResult(el));
-    el.querySelector('.tc-speak').addEventListener('click', () => speak(el));
     el.querySelector('.tc-pin').addEventListener('click', () => togglePin(el));
+    el.querySelector('.tc-more').addEventListener('click', () => toggleMenu(el));
     el.querySelector('.tc-close').addEventListener('click', () => closeCard(el));
+    buildMenu(el);
     enableDrag(el);
+  }
+
+  // Build the overflow "⋯" menu of secondary actions and append it to the shadow
+  // root (NOT inside the card, whose overflow:hidden would clip it). State classes
+  // live on the items, so existing toggle handlers keep working via cardBtn().
+  function buildMenu(el) {
+    const menu = document.createElement('div');
+    menu.className = 'tc-menu';
+    menu.hidden = true;
+    menu.innerHTML = `
+      <button class="tc-menuitem tc-save">${svg(ICONS.save)}<span>收藏到生词本</span></button>
+      <button class="tc-menuitem tc-compare">${svg(ICONS.compare)}<span>多引擎对照</span></button>
+      <button class="tc-menuitem tc-speak">${svg(ICONS.speak)}<span>朗读译文</span></button>`;
+    menu.querySelector('.tc-save').addEventListener('click', () => { toggleSave(el); closeMenu(el); });
+    menu.querySelector('.tc-compare').addEventListener('click', () => { toggleCompare(el); closeMenu(el); });
+    menu.querySelector('.tc-speak').addEventListener('click', () => { speak(el); closeMenu(el); });
+    if (!settings.enableTTS) menu.querySelector('.tc-speak').style.display = 'none';
+    root.appendChild(menu);
+    el._menuEl = menu;
+  }
+
+  // Find an action button whether it lives in the header or the overflow menu.
+  function cardBtn(el, cls) {
+    return el.querySelector('.' + cls) || (el._menuEl && el._menuEl.querySelector('.' + cls)) || null;
+  }
+
+  function toggleMenu(el) {
+    if (el._menuOpen) closeMenu(el);
+    else openMenu(el);
+  }
+
+  function openMenu(el) {
+    if (openMenuCard && openMenuCard !== el) closeMenu(openMenuCard);
+    const menu = el._menuEl;
+    const moreBtn = el.querySelector('.tc-more');
+    if (!menu || !moreBtn) return;
+    menu.hidden = false; // unhide before measuring
+    const r = moreBtn.getBoundingClientRect();
+    const mw = menu.offsetWidth || 184;
+    const mh = menu.offsetHeight || 184;
+    menu.style.left = clamp(r.right - mw, 6, window.innerWidth - mw - 6) + 'px';
+    menu.style.top = clamp(r.bottom + 6, 6, window.innerHeight - mh - 6) + 'px';
+    el._menuOpen = true;
+    openMenuCard = el;
+    // Defer so the click that opened the menu doesn't immediately close it.
+    setTimeout(() => document.addEventListener('mousedown', onMenuOutside, true), 0);
+  }
+
+  function closeMenu(el) {
+    if (el && el._menuEl) el._menuEl.hidden = true;
+    if (el) el._menuOpen = false;
+    if (openMenuCard === el) openMenuCard = null;
+    document.removeEventListener('mousedown', onMenuOutside, true);
+  }
+
+  // Close on any click that isn't on the menu or its trigger. composedPath()
+  // reveals the real target even across the shadow-DOM boundary.
+  function onMenuOutside(e) {
+    if (!openMenuCard) return;
+    const menu = openMenuCard._menuEl;
+    const moreBtn = openMenuCard.querySelector('.tc-more');
+    const path = (e.composedPath && e.composedPath()) || [];
+    if ((menu && path.includes(menu)) || (moreBtn && path.includes(moreBtn))) return;
+    closeMenu(openMenuCard);
   }
 
   // Toggle this card between single-engine and side-by-side multi-engine compare.
   function toggleCompare(el) {
     el._compare = !el._compare;
-    const btn = el.querySelector('.tc-compare');
-    btn.classList.toggle('tc-active', el._compare);
-    btn.title = el._compare ? '对照：开（点按切回单引擎）' : '多引擎对照（并排比较各家译文）';
+    const btn = cardBtn(el, 'tc-compare');
+    if (btn) {
+      btn.classList.toggle('tc-active', el._compare);
+      const label = btn.querySelector('span');
+      if (label) label.textContent = el._compare ? '关闭对照' : '多引擎对照';
+    }
     refreshCard(el);
   }
 
@@ -311,13 +379,15 @@
     updateSaveState(el);
   }
 
-  // Reflect whether this (text, target) is saved by filling the bookmark button.
+  // Reflect whether this (text, target) is saved on the 收藏 menu item.
   function updateSaveState(el) {
-    const btn = el.querySelector('.tc-save');
+    const btn = cardBtn(el, 'tc-save');
     if (!btn) return;
     tcVocabHas(el._text, el._target)
       .then((saved) => {
         btn.classList.toggle('tc-saved', saved);
+        const label = btn.querySelector('span');
+        if (label) label.textContent = saved ? '已在生词本（移出）' : '收藏到生词本';
         btn.title = saved ? '已收藏（点按移出生词本）' : '收藏到生词本';
       })
       .catch(() => {});
@@ -332,7 +402,7 @@
   }
 
   function setExplainActive(el, on) {
-    const btn = el.querySelector('.tc-explain');
+    const btn = el.querySelector('.tc-explainbtn');
     if (btn) btn.classList.toggle('tc-active', on);
   }
 
@@ -438,9 +508,13 @@
   // next selection opens a NEW card. Un-pin makes it the reusable card again.
   function togglePin(el) {
     el._pinned = !el._pinned;
-    const btn = el.querySelector('.tc-pin');
-    btn.classList.toggle('tc-pinned', el._pinned);
-    btn.title = el._pinned ? '取消常驻' : '钉住（常驻，下次划词另开新卡片）';
+    const btn = cardBtn(el, 'tc-pin');
+    if (btn) {
+      btn.classList.toggle('tc-pinned', el._pinned);
+      btn.title = el._pinned ? '取消钉住' : '钉住卡片'; // icon-only header button
+      const label = btn.querySelector('span'); // (no label on the header button)
+      if (label) label.textContent = el._pinned ? '取消钉住' : '钉住卡片';
+    }
     if (el._pinned) {
       if (activeCard === el) activeCard = null;
     } else {
@@ -515,7 +589,13 @@
     return el._compare ? doCompare(el) : doSingle(el);
   }
 
-  async function doSingle(el) {
+  // The LLM streams (token-by-token, feels fast); deterministic engines resolve
+  // in one shot from the worker cache/network.
+  function doSingle(el) {
+    return settings.provider === 'openai' ? doSingleStream(el) : doSingleOneShot(el);
+  }
+
+  async function doSingleOneShot(el) {
     renderLoading(el);
     try {
       const resp = await chrome.runtime.sendMessage({
@@ -532,26 +612,148 @@
     }
   }
 
-  async function doCompare(el) {
+  // Cancel any in-flight streaming translation for this card (re-translate, close,
+  // or a newer selection). Disconnecting the port aborts the worker's fetch.
+  function resetTranslateStream(el) {
+    if (el._streamWatchdog) {
+      clearTimeout(el._streamWatchdog);
+      el._streamWatchdog = null;
+    }
+    if (el._translatePort) {
+      try { el._translatePort.disconnect(); } catch (_) { /* ignore */ }
+      el._translatePort = null;
+    }
+  }
+
+  // Streamed LLM translation: the card fills in as the model writes. renderLoading
+  // (called first) cancels any prior stream via resetTranslateStream and shows the
+  // spinner until the first token lands.
+  function doSingleStream(el) {
     renderLoading(el);
+    const resultEl = el.querySelector('.tc-result');
+
+    let port;
+    try {
+      port = chrome.runtime.connect({ name: 'tc-translate-stream' });
+    } catch (_) {
+      return doSingleOneShot(el); // worker unreachable — fall back to one-shot
+    }
+    el._translatePort = port;
+
+    let acc = '';
+    let started = false;
+    let fellBack = false;
+
+    const showOriginal = () => {
+      const orig = el.querySelector('.tc-original');
+      if (settings.showOriginal) {
+        orig.hidden = false;
+        orig.textContent = el._text;
+      } else {
+        orig.hidden = true;
+      }
+    };
+    const teardown = () => {
+      if (el._streamWatchdog) { clearTimeout(el._streamWatchdog); el._streamWatchdog = null; }
+      if (el._translatePort === port) el._translatePort = null;
+      try { port.disconnect(); } catch (_) { /* ignore */ }
+    };
+
+    // Guard against an endpoint that hangs before the first token (no infinite
+    // spinner). Cleared as soon as streaming actually begins.
+    el._streamWatchdog = setTimeout(() => {
+      if (!started) {
+        renderError(el, '大模型响应超时，请重试或检查接口地址 / 模型设置');
+        teardown();
+      }
+    }, 20000);
+
+    port.onMessage.addListener((m) => {
+      if (!m) return;
+      if (m.type === 'delta') {
+        if (!started) {
+          started = true;
+          if (el._streamWatchdog) { clearTimeout(el._streamWatchdog); el._streamWatchdog = null; }
+          resultEl.classList.remove('tc-error');
+          resultEl.textContent = ''; // clear the spinner, begin live text
+        }
+        acc += m.delta;
+        resultEl.textContent = acc;
+      } else if (m.type === 'done') {
+        el._result = (m.text || acc).trim();
+        el._provider = m.provider || 'openai';
+        el._detected = m.detected || '';
+        resultEl.classList.remove('tc-error');
+        resultEl.textContent = el._result || '（未获得翻译结果）';
+        showOriginal();
+        updateSaveState(el);
+        teardown();
+      } else if (m.type === 'error') {
+        // A failure before any text usually means the endpoint can't stream —
+        // fall back to the one-shot path once so such servers still work.
+        if (!started && !fellBack) {
+          fellBack = true;
+          teardown();
+          doSingleOneShot(el);
+          return;
+        }
+        renderError(el, m.error || '翻译失败');
+        teardown();
+      }
+    });
+    port.onDisconnect.addListener(() => {
+      if (el._translatePort === port) el._translatePort = null;
+    });
+
+    port.postMessage({
+      type: 'translate',
+      text: el._text,
+      target: el._target,
+      context: settings.contextAware ? el._context : undefined,
+    });
+    return Promise.resolve();
+  }
+
+  // Multi-engine compare. Each engine renders into its own row the moment it
+  // settles (no waiting on the slowest), and the LLM row streams token-by-token
+  // over a port — so a slow model fills in live instead of failing the whole
+  // card with a hard 8s "超时".
+  function doCompare(el) {
     const providers =
       settings.compareProviders && settings.compareProviders.length
         ? settings.compareProviders
         : ['bing', 'google'];
+    resetCompareStream(el); // drop a prior compare still streaming, before rebuild
+    renderCompareSkeleton(el, providers);
+
+    let port;
     try {
-      const resp = await chrome.runtime.sendMessage({
-        type: 'tc-translate-multi',
-        text: el._text,
-        target: el._target,
-        providers,
-        context: settings.contextAware ? el._context : undefined,
-      });
-      if (!resp) throw new Error('扩展无响应，请重试');
-      if (resp.error) throw new Error(resp.error);
-      renderCompare(el, el._text, resp.results || []);
-    } catch (e) {
-      renderError(el, (e && e.message) || '翻译失败');
+      port = chrome.runtime.connect({ name: 'tc-compare-stream' });
+    } catch (_) {
+      renderError(el, '无法连接扩展后台，请刷新页面后重试');
+      return Promise.resolve();
     }
+    el._comparePort = port;
+
+    port.onMessage.addListener((m) => {
+      if (!m) return;
+      if (m.type === 'row-delta') appendCompareDelta(el, m.provider, m.delta);
+      else if (m.type === 'row-done') finishCompareRow(el, m.provider, m);
+      else if (m.type === 'row-error') errorCompareRow(el, m.provider, m);
+      else if (m.type === 'all-done') resetCompareStream(el);
+    });
+    port.onDisconnect.addListener(() => {
+      if (el._comparePort === port) el._comparePort = null;
+    });
+
+    port.postMessage({
+      type: 'compare',
+      text: el._text,
+      target: el._target,
+      providers,
+      context: settings.contextAware ? el._context : undefined,
+    });
+    return Promise.resolve();
   }
 
   function renderLoading(el) {
@@ -559,6 +761,8 @@
     r.classList.remove('tc-error');
     r.innerHTML = '<span class="tc-loading"><span class="tc-spinner"></span>翻译中…</span>';
     el.querySelector('.tc-original').hidden = true;
+    resetTranslateStream(el); // cancel a prior in-flight stream before re-rendering
+    resetCompareStream(el); // …and a prior compare stream (e.g. toggling compare off)
     resetExplain(el); // a new translation invalidates any prior explanation
   }
 
@@ -580,74 +784,101 @@
     updateSaveState(el);
   }
 
-  // Render the side-by-side multi-engine view: one labeled row per engine, each
-  // with its latency (or "缓存"/"失败") and an individual copy button.
-  function renderCompare(el, original, results) {
+  // Build one empty, labeled row per engine up front so results can stream in
+  // progressively. Row handles live on el._cmpRows, keyed by provider.
+  function renderCompareSkeleton(el, providers) {
+    resetTranslateStream(el); // a compare run supersedes any single-card stream
+    resetExplain(el);
     const r = el.querySelector('.tc-result');
     r.classList.remove('tc-error');
     r.textContent = '';
 
     const list = document.createElement('div');
-    list.className = 'tc-compare';
-    let primary = '';
-    let primaryProvider = '';
-    let primaryDetected = '';
+    list.className = 'tc-engines';
+    el._cmpRows = {};
+    el._cmpPrimary = null;
 
-    for (const item of results) {
+    for (const provider of providers) {
       const row = document.createElement('div');
       row.className = 'tc-engine-row';
-
       const head = document.createElement('div');
       head.className = 'tc-engine-head';
       const name = document.createElement('span');
       name.className = 'tc-engine-name';
       name.textContent =
-        (typeof TC_PROVIDER_NAMES !== 'undefined' && TC_PROVIDER_NAMES[item.provider]) ||
-        item.provider;
+        (typeof TC_PROVIDER_NAMES !== 'undefined' && TC_PROVIDER_NAMES[provider]) || provider;
       const meta = document.createElement('span');
       meta.className = 'tc-engine-meta';
-      meta.textContent = item.error ? '失败' : item.cached ? '缓存' : item.ms + 'ms';
+      meta.textContent = '翻译中…';
       head.appendChild(name);
       head.appendChild(meta);
-
-      const text = document.createElement('div');
-      text.className = 'tc-engine-text';
-      if (item.error) {
-        text.classList.add('tc-error');
-        text.textContent = item.error;
-      } else {
-        text.textContent = item.text; // textContent: never inject translated HTML
-        if (!primary) {
-          primary = item.text;
-          primaryProvider = item.provider;
-          primaryDetected = item.detected || '';
-        }
-        const copy = document.createElement('button');
-        copy.className = 'tc-iconbtn tc-engine-copy';
-        copy.title = '复制';
-        copy.innerHTML = svg(ICONS.copy, 14);
-        copy.addEventListener('click', () => copyText(item.text, copy));
-        head.appendChild(copy);
-      }
-
+      const textEl = document.createElement('div');
+      textEl.className = 'tc-engine-text';
       row.appendChild(head);
-      row.appendChild(text);
+      row.appendChild(textEl);
       list.appendChild(row);
+      el._cmpRows[provider] = { head, meta, textEl, acc: '', done: false };
     }
-
     r.appendChild(list);
-    el._result = primary; // header speak/copy act on the first successful engine
-    el._provider = primaryProvider;
-    el._detected = primaryDetected;
 
     const orig = el.querySelector('.tc-original');
-    if (settings.showOriginal && original) {
+    if (settings.showOriginal && el._text) {
       orig.hidden = false;
-      orig.textContent = original;
+      orig.textContent = el._text;
     } else {
       orig.hidden = true;
     }
-    updateSaveState(el);
+  }
+
+  function appendCompareDelta(el, provider, delta) {
+    const row = el._cmpRows && el._cmpRows[provider];
+    if (!row || row.done) return;
+    row.acc += delta;
+    row.textEl.textContent = row.acc; // textContent: never inject translated HTML
+  }
+
+  function finishCompareRow(el, provider, m) {
+    const row = el._cmpRows && el._cmpRows[provider];
+    if (!row) return;
+    row.done = true;
+    const text = ((m && m.text) || row.acc || '').trim();
+    row.textEl.classList.remove('tc-error');
+    row.textEl.textContent = text;
+    row.meta.textContent = m && m.cached ? '缓存' : m && m.ms != null ? m.ms + 'ms' : '';
+    if (text && !row.copyBtn) {
+      const copy = document.createElement('button');
+      copy.className = 'tc-iconbtn tc-engine-copy';
+      copy.title = '复制';
+      copy.innerHTML = svg(ICONS.copy, 14);
+      copy.addEventListener('click', () => copyText(text, copy));
+      row.head.appendChild(copy);
+      row.copyBtn = copy;
+    }
+    // The first engine to succeed feeds the header copy / speak / save actions.
+    if (text && !el._cmpPrimary) {
+      el._cmpPrimary = provider;
+      el._result = text;
+      el._provider = provider;
+      el._detected = (m && m.detected) || '';
+      updateSaveState(el);
+    }
+  }
+
+  function errorCompareRow(el, provider, m) {
+    const row = el._cmpRows && el._cmpRows[provider];
+    if (!row) return;
+    row.done = true;
+    row.textEl.classList.add('tc-error');
+    row.textEl.textContent = (m && m.error) || '失败';
+    row.meta.textContent = '失败';
+  }
+
+  // Disconnect a compare stream — also the abort signal for the worker's rows.
+  function resetCompareStream(el) {
+    if (el._comparePort) {
+      try { el._comparePort.disconnect(); } catch (_) { /* ignore */ }
+      el._comparePort = null;
+    }
   }
 
   function renderError(el, message) {
@@ -664,9 +895,16 @@
 
   function closeCard(el) {
     if (!el) return;
+    resetTranslateStream(el); // abort a streaming translation still in flight
+    resetCompareStream(el); // …and a streaming compare still in flight
     if (el._explainPort) {
       try { el._explainPort.disconnect(); } catch (_) { /* ignore */ }
       el._explainPort = null;
+    }
+    if (el._menuEl) {
+      closeMenu(el);
+      el._menuEl.remove();
+      el._menuEl = null;
     }
     cards.delete(el);
     if (activeCard === el) activeCard = null;
@@ -970,13 +1208,18 @@
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (openMenuCard) { closeMenu(openMenuCard); return; } // first Esc closes an open menu
       removeTrigger();
       removeLens();
       closeCard(activeCard); // closes the reusable card; pinned ones stay
     }
   }, true);
 
-  window.addEventListener('scroll', () => { removeTrigger(); removeLens(); }, true);
+  window.addEventListener('scroll', () => {
+    removeTrigger();
+    removeLens();
+    if (openMenuCard) closeMenu(openMenuCard);
+  }, true);
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'sync') return;

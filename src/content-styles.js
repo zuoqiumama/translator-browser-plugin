@@ -78,7 +78,10 @@ var TC_CSS = `
 /* ---- card ---- */
 .tc-card {
   position: fixed;
-  z-index: 2147483647;
+  /* One below the max so the overflow "more" menu (.tc-menu, at the max) and the
+     trigger always paint ABOVE the card — they are siblings in the same stacking
+     context, where equal z-index would otherwise let the later-inserted card win. */
+  z-index: 2147483646;
   width: 360px;
   max-width: calc(100vw - 24px);
   color: var(--tc-fg);
@@ -229,7 +232,7 @@ var TC_CSS = `
 .tc-iconbtn.tc-active { color: var(--tc-accent); background: var(--tc-hover); }
 .tc-iconbtn.tc-saved { color: var(--tc-accent); }
 .tc-iconbtn.tc-saved svg { fill: currentColor; }
-.tc-compare { display: flex; flex-direction: column; }
+.tc-engines { display: flex; flex-direction: column; }
 .tc-engine-row { padding: 10px 0; }
 .tc-engine-row:first-child { padding-top: 2px; }
 .tc-engine-row + .tc-engine-row { border-top: 1px solid var(--tc-divider); }
@@ -248,6 +251,43 @@ var TC_CSS = `
   white-space: pre-wrap; word-break: break-word; user-select: text;
 }
 .tc-engine-text.tc-error { font-size: 13px; }
+
+/* ---- overflow "more" menu ---- */
+.tc-menu {
+  position: fixed;
+  z-index: 2147483647;
+  min-width: 176px;
+  padding: 5px;
+  background: var(--tc-solid);
+  border: 1px solid var(--tc-border);
+  border-radius: 12px;
+  box-shadow: var(--tc-shadow);
+  display: flex; flex-direction: column; gap: 1px;
+  pointer-events: auto;
+  animation: tc-menu-in .12s cubic-bezier(.16,1,.3,1);
+}
+/* The author "display: flex" above outranks the UA [hidden] rule, so the hidden
+   attribute alone won't hide the menu — it would otherwise sit open at the
+   viewport's top-left from the moment a card is built. This wins it back.
+   (Backticks are forbidden here: this whole sheet is a JS template literal.) */
+.tc-menu[hidden] { display: none; }
+@keyframes tc-menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+.tc-menuitem {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 10px;
+  border: none; background: transparent;
+  color: var(--tc-fg); font: inherit; font-size: 13px;
+  text-align: left; border-radius: 8px; cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+.tc-menuitem svg { width: 16px; height: 16px; color: var(--tc-faint); flex: none; }
+.tc-menuitem:hover { background: var(--tc-hover); }
+.tc-menuitem.tc-active, .tc-menuitem.tc-saved, .tc-menuitem.tc-pinned { color: var(--tc-accent); }
+.tc-menuitem.tc-active svg, .tc-menuitem.tc-pinned svg { color: var(--tc-accent); }
+.tc-menuitem.tc-saved svg { color: var(--tc-accent); fill: currentColor; }
 
 /* slim scrollbar */
 .tc-body::-webkit-scrollbar { width: 8px; }
