@@ -4,199 +4,598 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>划词翻译卡片 · 设置</title>
+  <script src="theme.js"></script>
   <style>
+    /* ----------------------------------------------------------------------
+       Quiet-premium settings page. Shares the translation card's design DNA —
+       zinc + indigo, frosted glass, hairline borders, layered shadows, the same
+       spring easing — and elevates the standalone page with a bundled Fraunces
+       display serif used sparingly (wordmark, tagline, section numerals). The
+       working UI stays on the native system stack so page and card feel as one.
+       ---------------------------------------------------------------------- */
+
+    @font-face { font-family:'Fraunces'; font-style:normal; font-weight:300; font-display:swap; src:url('fonts/fraunces-300.woff2') format('woff2'); }
+    @font-face { font-family:'Fraunces'; font-style:normal; font-weight:400; font-display:swap; src:url('fonts/fraunces-400.woff2') format('woff2'); }
+    @font-face { font-family:'Fraunces'; font-style:normal; font-weight:600; font-display:swap; src:url('fonts/fraunces-600.woff2') format('woff2'); }
+    @font-face { font-family:'Fraunces'; font-style:italic; font-weight:400; font-display:swap; src:url('fonts/fraunces-400-italic.woff2') format('woff2'); }
+
     :root {
       color-scheme: light dark;
-      --bg:#f7f7fb; --card:#ffffff; --fg:#1f2937; --muted:#6b7280;
-      --border:#e5e7eb; --accent:#6366f1; --chip:#f3f4f6; --ok:#16a34a; --err:#ef4444;
+      --serif: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Roboto, Helvetica, Arial, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+      --bg: #f4f4f6;
+      --glow-1: rgba(99, 102, 241, 0.14);
+      --glow-2: rgba(99, 102, 241, 0.07);
+      --surface: rgba(255, 255, 255, 0.72);
+      --surface-solid: #ffffff;
+      --tray: rgba(0, 0, 0, 0.025);
+
+      --fg: #18181b;
+      --muted: #71717a;
+      --faint: #a1a1aa;
+      --border: rgba(0, 0, 0, 0.08);
+      --divider: rgba(0, 0, 0, 0.06);
+      --hover: rgba(0, 0, 0, 0.045);
+
+      --accent: #6366f1;
+      --accent-hi: #818cf8;
+      --accent-lo: #4f46e5;
+      --on-accent: #ffffff;
+      --ring: rgba(99, 102, 241, 0.32);
+      --ok: #10b981;
+      --err: #ef4444;
+
+      --shadow: 0 0 0 .5px rgba(0,0,0,.04), 0 2px 6px rgba(0,0,0,.05), 0 18px 48px rgba(0,0,0,.10);
+      --glass-edge: inset 0 1px 0 rgba(255,255,255,.55);
+      --spring: cubic-bezier(.16, 1, .3, 1);
+    }
+    /* Dark palette. `auto` follows the OS via the media query below; an explicit
+       主题 = 深色 sets <html data-theme="dark"> (theme.js), which wins. */
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"], :root.tc-dark {
+      color-scheme: dark;
+      --bg: #0b0b0e;
+      --glow-1: rgba(129, 140, 248, 0.16);
+      --glow-2: rgba(99, 102, 241, 0.09);
+      --surface: rgba(26, 26, 30, 0.66);
+      --surface-solid: #1a1a1e;
+      --tray: rgba(255, 255, 255, 0.035);
+
+      --fg: #f4f4f5;
+      --muted: #a1a1aa;
+      --faint: #71717a;
+      --border: rgba(255, 255, 255, 0.10);
+      --divider: rgba(255, 255, 255, 0.07);
+      --hover: rgba(255, 255, 255, 0.06);
+
+      --accent: #a5b4fc;
+      --accent-hi: #c7d2fe;
+      --accent-lo: #818cf8;
+      --on-accent: #0b0b0e;
+      --ring: rgba(165, 180, 252, 0.38);
+      --ok: #34d399;
+      --err: #f87171;
+
+      --shadow: 0 0 0 .5px rgba(255,255,255,.05), 0 2px 8px rgba(0,0,0,.4), 0 20px 56px rgba(0,0,0,.55);
+      --glass-edge: inset 0 1px 0 rgba(255,255,255,.07);
     }
     @media (prefers-color-scheme: dark) {
-      :root { --bg:#15171f; --card:#1f2330; --fg:#e7e9ee; --muted:#9aa0ac; --border:#343a4a; --accent:#818cf8; --chip:#2a2f3d; }
+      :root:not([data-theme]) {
+        color-scheme: dark;
+        --bg: #0b0b0e;
+        --glow-1: rgba(129, 140, 248, 0.16);
+        --glow-2: rgba(99, 102, 241, 0.09);
+        --surface: rgba(26, 26, 30, 0.66);
+        --surface-solid: #1a1a1e;
+        --tray: rgba(255, 255, 255, 0.035);
+
+        --fg: #f4f4f5;
+        --muted: #a1a1aa;
+        --faint: #71717a;
+        --border: rgba(255, 255, 255, 0.10);
+        --divider: rgba(255, 255, 255, 0.07);
+        --hover: rgba(255, 255, 255, 0.06);
+
+        --accent: #a5b4fc;
+        --accent-hi: #c7d2fe;
+        --accent-lo: #818cf8;
+        --on-accent: #0b0b0e;
+        --ring: rgba(165, 180, 252, 0.38);
+        --ok: #34d399;
+        --err: #f87171;
+
+        --shadow: 0 0 0 .5px rgba(255,255,255,.05), 0 2px 8px rgba(0,0,0,.4), 0 20px 56px rgba(0,0,0,.55);
+        --glass-edge: inset 0 1px 0 rgba(255,255,255,.07);
+      }
     }
+
     * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
     body {
-      margin: 0; padding: 32px 16px; background: var(--bg); color: var(--fg);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      font-size: 14px; line-height: 1.6;
+      margin: 0; min-height: 100vh; color: var(--fg);
+      font-family: var(--sans); font-size: 14px; line-height: 1.6;
+      background:
+        radial-gradient(58vw 52vw at 8% -12%, var(--glow-1), transparent 60%),
+        radial-gradient(46vw 46vw at 102% 108%, var(--glow-2), transparent 55%),
+        var(--bg);
+      background-attachment: fixed;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
-    .wrap { max-width: 640px; margin: 0 auto; }
-    h1 { font-size: 20px; display: flex; align-items: center; gap: 10px; margin: 0 0 4px; }
-    .badge { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: #fff;
-      display: flex; align-items: center; justify-content: center; font-size: 16px; }
-    .sub { color: var(--muted); margin: 0 0 22px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
-    .card h2 { font-size: 14px; margin: 0 0 14px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
-    .field { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; }
-    .field + .field { border-top: 1px dashed var(--border); }
-    .field > label:not(.switch) { flex: 1; }
-    .field .desc { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
-    input[type="text"], input[type="password"], select {
-      padding: 7px 9px; border-radius: 9px; border: 1px solid var(--border);
-      background: var(--chip); color: var(--fg); font-size: 13px; min-width: 200px;
+    /* fine grain for depth */
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      opacity: .035;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");
     }
-    input[type="text"], input[type="password"] { width: 260px; }
-    .switch { position: relative; width: 42px; height: 24px; flex: 0 0 42px; cursor: pointer; }
+    :root[data-theme="dark"] body::before { opacity: .05; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme]) body::before { opacity: .05; } }
+
+    ::selection { background: rgba(99, 102, 241, 0.22); }
+
+    /* ---- shell: editorial rail + content column ---- */
+    .shell {
+      position: relative; z-index: 1;
+      max-width: 1040px; margin: 0 auto; padding: 58px 28px 110px;
+      display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 60px;
+      align-items: start;
+    }
+
+    /* ---- left rail ---- */
+    .rail { position: sticky; top: 58px; display: flex; flex-direction: column; gap: 26px;
+      animation: rise .6s var(--spring) both; }
+
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .brand-badge {
+      width: 42px; height: 42px; border-radius: 13px; flex: none;
+      display: grid; place-items: center;
+      color: #fff; font-size: 21px; font-weight: 500; font-family: var(--sans);
+      background: linear-gradient(152deg, #818cf8, #6366f1 58%, #4f46e5);
+      box-shadow: 0 3px 10px rgba(79,70,229,.34), inset 0 1px 0 rgba(255,255,255,.45);
+    }
+    .brand-name { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+    .brand-tag {
+      font-family: var(--serif); font-style: italic; font-weight: 400;
+      color: var(--muted); font-size: 13.5px; line-height: 1.3; margin-top: 2px;
+      letter-spacing: .005em;
+    }
+
+    .nav { display: flex; flex-direction: column; gap: 1px;
+      border-top: 1px solid var(--divider); padding-top: 16px; }
+    .nav a {
+      display: flex; align-items: baseline; gap: 13px;
+      padding: 7px 10px; margin: 0 -10px; border-radius: 10px;
+      color: var(--muted); text-decoration: none;
+      transition: color .18s var(--spring), background .18s, transform .18s var(--spring);
+    }
+    .nav a:hover { color: var(--fg); background: var(--hover); transform: translateX(3px); }
+    .nav .n {
+      font-family: var(--serif); font-weight: 400; font-size: 13px; color: var(--faint);
+      font-variant-numeric: tabular-nums; min-width: 17px;
+      transition: color .18s var(--spring), font-weight .18s;
+    }
+    .nav a:hover .n { color: var(--accent); font-weight: 600; }
+    .nav .t { font-size: 13.5px; }
+
+    .rail-foot {
+      border-top: 1px solid var(--divider); padding-top: 16px;
+      color: var(--faint); font-size: 12px; line-height: 1.6;
+    }
+    .rail-foot .ver { font-variant-numeric: tabular-nums; }
+
+    /* ---- content column ---- */
+    .content { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+
+    .card {
+      position: relative; scroll-margin-top: 26px;
+      background: var(--surface);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      backdrop-filter: blur(22px) saturate(180%);
+      border: 1px solid var(--border); border-radius: 20px;
+      padding: 26px 28px; box-shadow: var(--shadow);
+      animation: rise .6s var(--spring) both;
+    }
+    .card::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      pointer-events: none; box-shadow: var(--glass-edge);
+    }
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .card { background: var(--surface-solid); }
+    }
+    .content > .card:nth-child(1) { animation-delay: .05s; }
+    .content > .card:nth-child(2) { animation-delay: .11s; }
+    .content > .card:nth-child(3) { animation-delay: .17s; }
+    .content > .card:nth-child(4) { animation-delay: .23s; }
+    .content > .card:nth-child(5) { animation-delay: .29s; }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+    /* ---- section header ---- */
+    .sec-head { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 6px; }
+    .sec-num {
+      font-family: var(--serif); font-weight: 300; font-size: 30px; line-height: 1;
+      color: var(--accent); font-variant-numeric: tabular-nums; opacity: .92;
+      margin-top: 1px; flex: none;
+    }
+    .sec-kicker {
+      display: block; font-family: var(--serif); font-style: italic;
+      font-size: 12px; color: var(--faint); letter-spacing: .02em; margin-bottom: 1px;
+    }
+    .sec-head h2 {
+      margin: 0; font-family: var(--sans); font-size: 16px; font-weight: 600;
+      letter-spacing: -.01em; color: var(--fg);
+    }
+    .sec-desc { color: var(--muted); font-size: 12.5px; line-height: 1.55; margin: 5px 0 0; max-width: 48ch; }
+
+    .rows { margin-top: 16px; }
+
+    /* ---- a setting row ---- */
+    .row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 18px; padding: 13px 0; flex-wrap: wrap;
+    }
+    .row + .row { border-top: 1px solid var(--divider); }
+    .row-l { flex: 1 1 230px; min-width: 0; }
+    .row-l label { display: block; font-size: 13.5px; color: var(--fg); }
+    .row-l .desc { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 3px; max-width: 50ch; }
+
+    /* ---- controls ---- */
+    .ctl {
+      font-family: var(--sans); font-size: 13px; color: var(--fg);
+      background: var(--tray); border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 11px;
+      transition: border-color .16s, box-shadow .16s, background .16s;
+    }
+    .ctl:hover { border-color: color-mix(in srgb, var(--accent) 26%, var(--border)); }
+    .ctl:focus, .ctl:focus-visible {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--ring); background: var(--surface-solid);
+    }
+    .ctl::placeholder { color: var(--faint); }
+    .ctl.mono { font-family: var(--mono); font-size: 12.5px; letter-spacing: -.01em; }
+
+    select.ctl {
+      appearance: none; -webkit-appearance: none; cursor: pointer;
+      padding-right: 30px; max-width: 100%;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+      background-repeat: no-repeat; background-position: right 10px center;
+    }
+    select.ctl { min-width: 200px; }
+    select.ctl option { background: var(--surface-solid); color: var(--fg); }
+    input.ctl { width: 280px; max-width: 100%; }
+
+    /* ---- toggle switch (markup + 42px track preserved for tests) ---- */
+    .switch { position: relative; width: 42px; height: 24px; flex: 0 0 42px; cursor: pointer; display: inline-block; }
     .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-    .slider { position: absolute; inset: 0; background: var(--border); border-radius: 999px; transition: .2s; cursor: pointer; }
-    .slider::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
-      background: #fff; border-radius: 50%; transition: .2s; }
+    .slider {
+      position: absolute; inset: 0; border-radius: 999px; background: var(--border);
+      transition: background .24s var(--spring);
+    }
+    .slider::before {
+      content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.28);
+      transition: transform .28s var(--spring);
+    }
     .switch input:checked + .slider { background: var(--accent); }
     .switch input:checked + .slider::before { transform: translateX(18px); }
     .switch input:focus-visible + .slider { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .hidden { display: none; }
-    .test { display: flex; gap: 8px; margin-top: 4px; }
-    .test input { flex: 1; }
-    button {
-      padding: 8px 14px; border: none; border-radius: 9px; cursor: pointer;
-      background: var(--accent); color: #fff; font-size: 13px; font-weight: 500;
+
+    /* ---- buttons ---- */
+    .btn {
+      font-family: var(--sans); font-size: 13px; font-weight: 500; line-height: 1;
+      border: 1px solid transparent; border-radius: 10px; padding: 10px 16px; cursor: pointer;
+      transition: transform .14s var(--spring), box-shadow .18s, background .16s, border-color .16s;
     }
-    button.ghost { background: var(--chip); color: var(--fg); border: 1px solid var(--border); }
-    button:hover { opacity: .92; }
-    .result { margin-top: 10px; padding: 10px 12px; border-radius: 9px; background: var(--chip);
-      white-space: pre-wrap; word-break: break-word; min-height: 20px; }
-    .result.err { color: var(--err); }
-    .saved { color: var(--ok); font-size: 12px; opacity: 0; transition: opacity .2s; }
-    .saved.show { opacity: 1; }
-    a { color: var(--accent); }
-    .note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .btn-primary {
+      color: var(--on-accent);
+      background: linear-gradient(180deg, var(--accent-hi), var(--accent));
+      box-shadow: 0 1px 2px rgba(79,70,229,.38), inset 0 1px 0 rgba(255,255,255,.28);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(79,70,229,.40), inset 0 1px 0 rgba(255,255,255,.28); }
+    .btn-primary:active { transform: translateY(0) scale(.98); }
+    .btn-ghost { color: var(--fg); background: var(--tray); border-color: var(--border); }
+    .btn-ghost:hover { background: var(--hover); border-color: color-mix(in srgb, var(--accent) 26%, var(--border)); }
+    .btn-ghost:active { transform: scale(.98); }
+
+    /* ---- "try it" inset tray ---- */
+    .subpanel {
+      margin-top: 18px; padding: 15px 16px; border-radius: 14px;
+      background: var(--tray); border: 1px solid var(--divider);
+    }
+    .subpanel .note:first-child { margin-top: 0; }
+    .test { display: flex; gap: 10px; margin-top: 11px; }
+    .test .ctl { flex: 1; width: auto; min-width: 0; }
+
+    .result {
+      margin-top: 11px; padding: 12px 14px; border-radius: 11px;
+      background: var(--surface-solid); border: 1px solid var(--divider);
+      font-size: 13.5px; line-height: 1.6; color: var(--fg);
+      white-space: pre-wrap; word-break: break-word; min-height: 20px;
+      animation: rise .28s var(--spring) both;
+    }
+    .result:empty { display: none; }
+    .result.err { color: var(--err); border-color: color-mix(in srgb, var(--err) 32%, transparent); }
+
+    .note { color: var(--muted); font-size: 12.5px; line-height: 1.6; margin: 14px 0 0; }
+    .note a { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+    .note a:hover { border-bottom-color: var(--accent); }
+    .grant-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    #grantStatus { font-size: 12.5px; color: var(--muted); }
+
+    .hidden { display: none !important; }
+
+    /* ---- floating "saved" toast ---- */
+    .saved {
+      position: fixed; right: 24px; bottom: 24px; z-index: 20;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 15px; border-radius: 999px;
+      background: var(--surface);
+      -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
+      border: 1px solid var(--border); box-shadow: var(--shadow);
+      color: var(--ok); font-size: 12.5px; font-weight: 500;
+      opacity: 0; transform: translateY(10px) scale(.96); pointer-events: none;
+      transition: opacity .3s var(--spring), transform .3s var(--spring);
+    }
+    .saved.show { opacity: 1; transform: none; }
+
+    /* ---- responsive ---- */
+    @media (max-width: 880px) {
+      .shell { grid-template-columns: 1fr; gap: 30px; padding: 34px 18px 72px; }
+      .rail { position: static; top: auto; }
+      .nav { display: none; }
+      input.ctl { width: 100%; }
+      .row-l { flex-basis: 100%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { animation: none !important; transition: none !important; }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1><span class="badge">译</span>划词翻译卡片 <span class="saved" id="saved">已保存 ✓</span></h1>
-    <p class="sub">选中网页文字 → 原地卡片翻译。所有设置自动保存并同步。</p>
-
-    <div class="card">
-      <h2>常规</h2>
-      <div class="field">
-        <label for="targetLang">目标语言<span class="desc">把选中的文字翻译成这个语言</span></label>
-        <select id="targetLang"></select>
-      </div>
-      <div class="field">
-        <label for="triggerMode">触发方式</label>
-        <select id="triggerMode">
-          <option value="button">选中后显示翻译按钮</option>
-          <option value="auto">选中后立即翻译</option>
-          <option value="off">仅用快捷键 / 右键菜单</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="theme">主题</label>
-        <select id="theme">
-          <option value="auto">跟随系统</option>
-          <option value="light">浅色</option>
-          <option value="dark">深色</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="showOriginal">卡片显示原文</label>
-        <label class="switch"><input type="checkbox" id="showOriginal" /><span class="slider"></span></label>
-      </div>
-      <div class="field">
-        <label for="enableTTS">显示朗读按钮</label>
-        <label class="switch"><input type="checkbox" id="enableTTS" /><span class="slider"></span></label>
-      </div>
-      <div class="field">
-        <label for="lensEnabled">悬停阅读透镜<span class="desc">鼠标划过段落即在下方显示译文（用快速引擎，开销低）</span></label>
-        <label class="switch"><input type="checkbox" id="lensEnabled" /><span class="slider"></span></label>
-      </div>
-      <div class="field">
-        <label for="contextAware">上下文翻译<span class="desc">连同所在段落一起送给模型消歧，更准（仅大模型引擎生效）</span></label>
-        <label class="switch"><input type="checkbox" id="contextAware" /><span class="slider"></span></label>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>翻译引擎</h2>
-      <div class="field">
-        <label for="provider">引擎<span class="desc">微软免费且国内可直连；DeepL / 大模型质量更高</span></label>
-        <select id="provider">
-          <option value="bing">微软翻译（免费，国内可用，开箱即用）</option>
-          <option value="google">Google（免费，需可访问谷歌）</option>
-          <option value="deepl">DeepL</option>
-          <option value="openai">大模型 / OpenAI 兼容接口</option>
-        </select>
-      </div>
-
-      <!-- DeepL -->
-      <div id="deeplSection" class="hidden">
-        <div class="field">
-          <label for="deeplKey">DeepL API Key</label>
-          <input type="password" id="deeplKey" placeholder="xxxxxxxx-xxxx-..." />
+  <div class="shell">
+    <!-- editorial rail -->
+    <aside class="rail">
+      <div class="brand">
+        <span class="brand-badge">译</span>
+        <div>
+          <div class="brand-name">划词翻译卡片</div>
+          <div class="brand-tag">read the world,<br />in your words</div>
         </div>
-        <div class="field">
-          <label for="deeplPro">使用 Pro 接口<span class="desc">关=免费版 api-free.deepl.com</span></label>
-          <label class="switch"><input type="checkbox" id="deeplPro" /><span class="slider"></span></label>
+      </div>
+
+      <nav class="nav">
+        <a href="#sec-general"><span class="n">01</span><span class="t">常规</span></a>
+        <a href="#sec-engine"><span class="n">02</span><span class="t">翻译引擎</span></a>
+        <a href="#sec-model"><span class="n">03</span><span class="t">大模型</span></a>
+        <a href="#sec-compare"><span class="n">04</span><span class="t">多引擎对照</span></a>
+        <a href="#sec-vocab"><span class="n">05</span><span class="t">生词本</span></a>
+      </nav>
+
+      <div class="rail-foot">
+        更改即时保存，并跨设备同步。<br />
+        <span class="ver">Select&nbsp;to&nbsp;Translate · v1.3.0</span>
+      </div>
+    </aside>
+
+    <!-- settings -->
+    <main class="content">
+      <!-- 01 -->
+      <section class="card" id="sec-general">
+        <header class="sec-head">
+          <span class="sec-num">01</span>
+          <div>
+            <span class="sec-kicker">General</span>
+            <h2>常规</h2>
+            <p class="sec-desc">翻译方向、触发方式与卡片的呈现。</p>
+          </div>
+        </header>
+        <div class="rows">
+          <div class="row">
+            <div class="row-l">
+              <label for="targetLang">目标语言</label>
+              <span class="desc">把选中的文字翻译成这个语言</span>
+            </div>
+            <select id="targetLang" class="ctl"></select>
+          </div>
+          <div class="row">
+            <div class="row-l"><label for="triggerMode">触发方式</label></div>
+            <select id="triggerMode" class="ctl">
+              <option value="button">选中后显示翻译按钮</option>
+              <option value="auto">选中后立即翻译</option>
+              <option value="off">仅用快捷键 / 右键菜单</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="row-l">
+              <label for="theme">主题</label>
+              <span class="desc">卡片与设置 / 生词本页统一切换；跟随系统或固定浅色 / 深色</span>
+            </div>
+            <select id="theme" class="ctl">
+              <option value="auto">跟随系统</option>
+              <option value="light">浅色</option>
+              <option value="dark">深色</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="row-l"><label for="showOriginal">卡片显示原文</label></div>
+            <label class="switch"><input type="checkbox" id="showOriginal" /><span class="slider"></span></label>
+          </div>
+          <div class="row">
+            <div class="row-l"><label for="enableTTS">显示朗读按钮</label></div>
+            <label class="switch"><input type="checkbox" id="enableTTS" /><span class="slider"></span></label>
+          </div>
+          <div class="row">
+            <div class="row-l">
+              <label for="lensEnabled">悬停阅读透镜</label>
+              <span class="desc">鼠标划过段落即在下方显示译文（用快速引擎，开销低）</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="lensEnabled" /><span class="slider"></span></label>
+          </div>
+          <div class="row">
+            <div class="row-l">
+              <label for="contextAware">上下文翻译</label>
+              <span class="desc">连同所在段落一起送给模型消歧，更准（仅大模型引擎生效）</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="contextAware" /><span class="slider"></span></label>
+          </div>
         </div>
-        <p class="note">免费 Key 可在 <a href="https://www.deepl.com/pro-api" target="_blank" rel="noreferrer">deepl.com/pro-api</a> 申请。</p>
-      </div>
+      </section>
 
-      <p class="note">测试当前默认引擎的翻译效果：</p>
-      <div class="test">
-        <input type="text" id="testInput" placeholder="输入一句话测试当前引擎…" value="Hello, world!" />
-        <button id="testBtn" type="button">测试</button>
-      </div>
-      <div class="result" id="testResult"></div>
-    </div>
+      <!-- 02 -->
+      <section class="card" id="sec-engine">
+        <header class="sec-head">
+          <span class="sec-num">02</span>
+          <div>
+            <span class="sec-kicker">Engine</span>
+            <h2>翻译引擎</h2>
+            <p class="sec-desc">划词翻译使用的默认引擎。微软免费、国内可直连；DeepL / 大模型质量更高。</p>
+          </div>
+        </header>
+        <div class="rows">
+          <div class="row">
+            <div class="row-l">
+              <label for="provider">引擎</label>
+              <span class="desc">大模型引擎走下方「大模型」配置</span>
+            </div>
+            <select id="provider" class="ctl">
+              <option value="bing">微软翻译（免费，国内可用，开箱即用）</option>
+              <option value="google">Google（免费，需可访问谷歌）</option>
+              <option value="deepl">DeepL</option>
+              <option value="openai">大模型 / OpenAI 兼容接口</option>
+            </select>
+          </div>
 
-    <div class="card">
-      <h2>大模型配置</h2>
-      <p class="note" style="margin-top:0">
-        独立于默认翻译引擎。用于大模型默认翻译、多引擎对照中的大模型结果，以及 AI 解释。
-      </p>
-      <div class="field">
-        <label for="openaiBaseUrl">接口地址 (Base URL)<span class="desc">支持 OpenAI / OpenRouter / SiliconFlow / Ollama / 自建</span></label>
-        <input type="text" id="openaiBaseUrl" placeholder="https://api.openai.com/v1" />
-      </div>
-      <div class="field">
-        <label for="openaiModel">模型</label>
-        <input type="text" id="openaiModel" placeholder="gpt-4o-mini" />
-      </div>
-      <div class="field">
-        <label for="openaiKey">API Key<span class="desc">本地模型可留空</span></label>
-        <input type="password" id="openaiKey" placeholder="sk-..." />
-      </div>
-      <p class="note">
-        自定义域名需要授权访问权限：
-        <button class="ghost" id="grantBtn" type="button">授权该接口域名</button>
-        <span id="grantStatus"></span>
-      </p>
-      <div class="test">
-        <input type="text" id="llmTestInput" placeholder="输入一句话测试大模型配置…" value="Hello, world!" />
-        <button id="llmTestBtn" type="button">测试大模型</button>
-      </div>
-      <div class="result" id="llmTestResult"></div>
-    </div>
+          <!-- DeepL (revealed when provider = deepl) -->
+          <div id="deeplSection" class="hidden">
+            <div class="row">
+              <div class="row-l"><label for="deeplKey">DeepL API Key</label></div>
+              <input type="password" id="deeplKey" class="ctl mono" placeholder="xxxxxxxx-xxxx-..." />
+            </div>
+            <div class="row">
+              <div class="row-l">
+                <label for="deeplPro">使用 Pro 接口</label>
+                <span class="desc">关闭即使用免费版 api-free.deepl.com</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="deeplPro" /><span class="slider"></span></label>
+            </div>
+            <p class="note">免费 Key 可在 <a href="https://www.deepl.com/pro-api" target="_blank" rel="noreferrer">deepl.com/pro-api</a> 申请。</p>
+          </div>
+        </div>
 
-    <div class="card">
-      <h2>多引擎对照</h2>
-      <p class="note" style="margin-top:0">在卡片的「更多操作」中开启对照，并排比较下列引擎。大模型使用上方独立配置，不受默认引擎影响。</p>
-      <div class="field">
-        <label for="cmp-bing">微软翻译</label>
-        <label class="switch"><input type="checkbox" id="cmp-bing" data-cmp="bing" /><span class="slider"></span></label>
-      </div>
-      <div class="field">
-        <label for="cmp-google">Google</label>
-        <label class="switch"><input type="checkbox" id="cmp-google" data-cmp="google" /><span class="slider"></span></label>
-      </div>
-      <div class="field">
-        <label for="cmp-deepl">DeepL</label>
-        <label class="switch"><input type="checkbox" id="cmp-deepl" data-cmp="deepl" /><span class="slider"></span></label>
-      </div>
-      <div class="field">
-        <label for="cmp-openai">大模型 / OpenAI 兼容</label>
-        <label class="switch"><input type="checkbox" id="cmp-openai" data-cmp="openai" /><span class="slider"></span></label>
-      </div>
-    </div>
+        <div class="subpanel">
+          <p class="note">测试当前默认引擎的翻译效果</p>
+          <div class="test">
+            <input type="text" id="testInput" class="ctl" placeholder="输入一句话测试当前引擎…" value="Hello, world!" />
+            <button id="testBtn" class="btn btn-primary" type="button">测试</button>
+          </div>
+          <div class="result" id="testResult"></div>
+        </div>
+      </section>
 
-    <div class="card">
-      <h2>生词本</h2>
-      <div class="field">
-        <label>收藏的词句<span class="desc">本地保存，可搜索、删除、导出 CSV / Anki</span></label>
-        <button class="ghost" id="openVocab" type="button">打开生词本</button>
-      </div>
-    </div>
+      <!-- 03 -->
+      <section class="card" id="sec-model">
+        <header class="sec-head">
+          <span class="sec-num">03</span>
+          <div>
+            <span class="sec-kicker">Model</span>
+            <h2>大模型配置</h2>
+            <p class="sec-desc">独立于默认引擎，供大模型默认翻译、多引擎对照中的大模型结果，以及 AI 解释使用。</p>
+          </div>
+        </header>
+        <div class="rows">
+          <div class="row">
+            <div class="row-l">
+              <label for="openaiBaseUrl">接口地址 (Base URL)</label>
+              <span class="desc">支持 OpenAI / OpenRouter / SiliconFlow / Ollama / 自建</span>
+            </div>
+            <input type="text" id="openaiBaseUrl" class="ctl mono" placeholder="https://api.openai.com/v1" />
+          </div>
+          <div class="row">
+            <div class="row-l"><label for="openaiModel">模型</label></div>
+            <input type="text" id="openaiModel" class="ctl mono" placeholder="gpt-4o-mini" />
+          </div>
+          <div class="row">
+            <div class="row-l">
+              <label for="openaiKey">API Key</label>
+              <span class="desc">本地模型可留空</span>
+            </div>
+            <input type="password" id="openaiKey" class="ctl mono" placeholder="sk-..." />
+          </div>
+        </div>
+
+        <p class="note">自定义域名需要授权访问权限。</p>
+        <div class="grant-row">
+          <button class="btn btn-ghost" id="grantBtn" type="button">授权该接口域名</button>
+          <span id="grantStatus"></span>
+        </div>
+
+        <div class="subpanel">
+          <p class="note">测试大模型连接与翻译</p>
+          <div class="test">
+            <input type="text" id="llmTestInput" class="ctl" placeholder="输入一句话测试大模型配置…" value="Hello, world!" />
+            <button id="llmTestBtn" class="btn btn-primary" type="button">测试大模型</button>
+          </div>
+          <div class="result" id="llmTestResult"></div>
+        </div>
+      </section>
+
+      <!-- 04 -->
+      <section class="card" id="sec-compare">
+        <header class="sec-head">
+          <span class="sec-num">04</span>
+          <div>
+            <span class="sec-kicker">Compare</span>
+            <h2>多引擎对照</h2>
+            <p class="sec-desc">在卡片的「更多操作」中开启对照，并排比较下列引擎。大模型使用上方独立配置。</p>
+          </div>
+        </header>
+        <div class="rows">
+          <div class="row">
+            <div class="row-l"><label for="cmp-bing">微软翻译</label></div>
+            <label class="switch"><input type="checkbox" id="cmp-bing" data-cmp="bing" /><span class="slider"></span></label>
+          </div>
+          <div class="row">
+            <div class="row-l"><label for="cmp-google">Google</label></div>
+            <label class="switch"><input type="checkbox" id="cmp-google" data-cmp="google" /><span class="slider"></span></label>
+          </div>
+          <div class="row">
+            <div class="row-l"><label for="cmp-deepl">DeepL</label></div>
+            <label class="switch"><input type="checkbox" id="cmp-deepl" data-cmp="deepl" /><span class="slider"></span></label>
+          </div>
+          <div class="row">
+            <div class="row-l"><label for="cmp-openai">大模型 / OpenAI 兼容</label></div>
+            <label class="switch"><input type="checkbox" id="cmp-openai" data-cmp="openai" /><span class="slider"></span></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- 05 -->
+      <section class="card" id="sec-vocab">
+        <header class="sec-head">
+          <span class="sec-num">05</span>
+          <div>
+            <span class="sec-kicker">Vocabulary</span>
+            <h2>生词本</h2>
+            <p class="sec-desc">收藏的词句，本地保存，可搜索、删除、间隔复习与导出 CSV / Anki。</p>
+          </div>
+        </header>
+        <div class="rows">
+          <div class="row">
+            <div class="row-l"><label>收藏的词句</label></div>
+            <button class="btn btn-ghost" id="openVocab" type="button">打开生词本</button>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
+
+  <span class="saved" id="saved">已保存 ✓</span>
 
   <script src="data.js"></script>
   <script src="options.js"></script>

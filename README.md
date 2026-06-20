@@ -9,7 +9,7 @@
     <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-4285F4?style=flat-square">
     <img alt="Chrome / Edge" src="https://img.shields.io/badge/Chrome%20%2F%20Edge-supported-34A853?style=flat-square">
     <img alt="No server" src="https://img.shields.io/badge/backend-not%20required-111827?style=flat-square">
-    <img alt="Version" src="https://img.shields.io/badge/version-1.2.0-7C3AED?style=flat-square">
+    <img alt="Version" src="https://img.shields.io/badge/version-1.3.0-7C3AED?style=flat-square">
   </p>
 
   <p>
@@ -25,6 +25,13 @@
 | <img src="img/透镜.png" width="520" alt="Hover lens screenshot"> | <img src="img/卡片.png" width="360" alt="Translation card screenshot"> |
 
 ## What's New · 更新亮点
+
+### v1.3.0
+
+- **统一视觉系统 · Unified visual system**：设置页、生词本和复习页升级为一致的锌灰 + 靛蓝玻璃质感界面，层级、间距、控件与反馈状态更清晰。The settings, vocabulary, and review pages now share a cohesive zinc-and-indigo glass interface with clearer hierarchy, spacing, controls, and feedback.
+- **主题真正全局生效 · Theme everywhere**：新增共享主题脚本，浅色、深色与跟随系统设置会同步应用到弹窗、设置页、生词本和复习页，已打开的页面也会实时切换。Light, dark, and system themes now apply consistently across the popup and every extension page, including live updates when the setting changes.
+- **自带字体、离线可用 · Bundled typography**：内置 Fraunces 字体资源用于品牌与辅助排版，不依赖外部字体服务，离线环境也能保持完整视觉效果。Fraunces display fonts are bundled locally, preserving the intended typography without external font requests.
+- **响应式与动效优化 · Responsive & accessible motion**：设置页在窄屏下自动切换单栏布局，交互状态更明确，并尊重 `prefers-reduced-motion` 减少动态效果。The refreshed layouts adapt to narrow screens, improve interaction states, and respect reduced-motion preferences.
 
 ### v1.2.0
 
@@ -149,6 +156,8 @@ translate-card/
 │  ├─ vocab.js                   # Vocabulary store + spaced repetition · 生词本存储 + 复习调度
 │  ├─ vocab.html / vocab-app.js  # Vocabulary manager page · 生词本管理页
 │  ├─ review.html / review-app.js # Flashcard review page · 复习卡片页
+│  ├─ theme.js                    # Shared extension-page theme · 扩展页面统一主题
+│  ├─ fonts/                      # Bundled display fonts · 内置展示字体
 │  ├─ popup.html / popup.js      # Toolbar popup · 工具栏弹窗
 │  └─ options.html / options.js  # Full options page · 完整设置页
 ├─ icons/                        # Extension icons · 扩展图标
