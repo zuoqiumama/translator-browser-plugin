@@ -9,7 +9,7 @@
     <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-4285F4?style=flat-square">
     <img alt="Chrome / Edge" src="https://img.shields.io/badge/Chrome%20%2F%20Edge-supported-34A853?style=flat-square">
     <img alt="No server" src="https://img.shields.io/badge/backend-not%20required-111827?style=flat-square">
-    <img alt="Version" src="https://img.shields.io/badge/version-1.3.0-7C3AED?style=flat-square">
+    <img alt="Version" src="https://img.shields.io/badge/version-1.4.0-7C3AED?style=flat-square">
   </p>
 
   <p>
@@ -25,6 +25,11 @@
 | <img src="img/透镜.png" width="520" alt="Hover lens screenshot"> | <img src="img/卡片.png" width="360" alt="Translation card screenshot"> |
 
 ## What's New · 更新亮点
+
+### v1.4.0
+
+- **关于页面 · About card**：设置页新增「关于」卡片，集中展示版本号、开源地址、更新日志与反馈入口。The settings page now has an **About** card gathering the version, repository links, changelog, and feedback entry in one place.
+- **一键反馈 · Built-in feedback**：新增反馈页，把你的问题或建议整理成一条预填好的 GitHub issue（自动附上扩展版本 / 浏览器 / 系统信息），点一下确认即可提交——无后端、无密钥、不收集任何数据；从「关于」卡片或工具栏弹窗的「意见反馈」均可进入。A new feedback page turns a bug report or idea into a **prefilled GitHub issue** (with extension version / browser / OS attached automatically) that you confirm and submit — no backend, no token, no data collection. Reachable from the About card and the toolbar popup.
 
 ### v1.3.0
 
@@ -141,6 +146,14 @@ If you use a custom domain, grant host permission from the options page by click
 - Requests are sent from the extension Service Worker, so API keys are not exposed to the webpage. 翻译请求由 Service Worker 发起，避免把 API Key 暴露到网页环境。
 - Translation content is rendered with `textContent`, not injected as HTML. 译文使用 `textContent` 写入卡片，不注入 HTML。
 
+## Feedback · 反馈与帮助
+
+Found a bug or have an idea? Open the options page → **关于 (About)**, or the toolbar popup → **意见反馈**, and click **反馈 / 报告问题**. The form pre-fills a GitHub issue (with extension version, browser, and OS attached automatically) and opens it for you to confirm — no account data is collected. You can also browse or file issues directly:
+
+遇到 Bug 或有建议？打开设置页的 **关于**，或工具栏弹窗的 **意见反馈**，点 **反馈 / 报告问题**。表单会自动带上扩展版本、浏览器与系统信息，预填好一条 GitHub issue 供你确认提交，不收集任何账户数据。也可以直接查看或提交：
+
+- Issues: <https://github.com/zuoqiumama/translator-browser-plugin/issues>
+
 ## Project Structure · 项目结构
 
 ```text
@@ -159,7 +172,8 @@ translate-card/
 │  ├─ theme.js                    # Shared extension-page theme · 扩展页面统一主题
 │  ├─ fonts/                      # Bundled display fonts · 内置展示字体
 │  ├─ popup.html / popup.js      # Toolbar popup · 工具栏弹窗
-│  └─ options.html / options.js  # Full options page · 完整设置页
+│  ├─ feedback.html / feedback.js # Feedback → GitHub issue · 反馈页（直达 GitHub issue）
+│  └─ options.html / options.js  # Full options page (含「关于」) · 完整设置页
 ├─ icons/                        # Extension icons · 扩展图标
 ├─ img/                          # README screenshots · README 截图
 └─ tools/gen-icons.js            # Icon generator · 图标生成脚本

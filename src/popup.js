@@ -43,4 +43,14 @@
     chrome.tabs.create({ url: chrome.runtime.getURL('src/vocab.html') });
     window.close();
   });
+
+  document.getElementById('openFeedback').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('src/feedback.html') });
+    window.close();
+  });
+
+  document.getElementById('openAbout').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('src/options.html#sec-about') });
+    window.close();
+  });
 })();

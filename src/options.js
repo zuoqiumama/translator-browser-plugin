@@ -87,6 +87,17 @@
   $('openVocab').addEventListener('click', () =>
     chrome.tabs.create({ url: chrome.runtime.getURL('src/vocab.html') }));
 
+  // Show the real version everywhere it appears (manifest is the source of truth).
+  try {
+    const version = chrome.runtime.getManifest().version;
+    for (const id of ['aboutVersion', 'railVersion']) {
+      const el = $(id);
+      if (el) el.textContent = version;
+    }
+  } catch (_) {
+    /* getManifest unavailable outside the extension — keep the static fallback */
+  }
+
   function updateSections() {
     $('deeplSection').classList.toggle('hidden', fields.provider.value !== 'deepl');
   }

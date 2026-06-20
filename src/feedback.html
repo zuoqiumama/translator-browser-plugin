@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>反馈 / 报告问题 · 划词翻译卡片</title>
+  <script src="theme.js"></script>
+  <style>
+    /* Shares the settings / vocabulary design system (zinc + indigo frosted
+       glass, Fraunces display serif). Theme: prefers-color-scheme drives `auto`;
+       explicit [data-theme] (set by theme.js from the 主题 setting) overrides. */
+
+    @font-face { font-family:'Fraunces'; font-style:normal; font-weight:300; font-display:swap; src:url('fonts/fraunces-300.woff2') format('woff2'); }
+    @font-face { font-family:'Fraunces'; font-style:normal; font-weight:400; font-display:swap; src:url('fonts/fraunces-400.woff2') format('woff2'); }
+    @font-face { font-family:'Fraunces'; font-style:normal; font-weight:600; font-display:swap; src:url('fonts/fraunces-600.woff2') format('woff2'); }
+    @font-face { font-family:'Fraunces'; font-style:italic; font-weight:400; font-display:swap; src:url('fonts/fraunces-400-italic.woff2') format('woff2'); }
+
+    :root {
+      color-scheme: light dark;
+      --serif: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Roboto, Helvetica, Arial, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+      --bg: #f4f4f6;
+      --glow-1: rgba(99, 102, 241, 0.14);
+      --glow-2: rgba(99, 102, 241, 0.07);
+      --surface: rgba(255, 255, 255, 0.72);
+      --surface-solid: #ffffff;
+      --tray: rgba(0, 0, 0, 0.025);
+      --fg: #18181b; --muted: #71717a; --faint: #a1a1aa;
+      --border: rgba(0, 0, 0, 0.08); --divider: rgba(0, 0, 0, 0.06); --hover: rgba(0, 0, 0, 0.045);
+      --accent: #6366f1; --accent-hi: #818cf8; --accent-lo: #4f46e5; --on-accent: #ffffff;
+      --ring: rgba(99, 102, 241, 0.32); --ok: #10b981; --err: #ef4444;
+      --shadow: 0 0 0 .5px rgba(0,0,0,.04), 0 2px 6px rgba(0,0,0,.05), 0 18px 48px rgba(0,0,0,.10);
+      --glass-edge: inset 0 1px 0 rgba(255,255,255,.55);
+      --spring: cubic-bezier(.16, 1, .3, 1);
+    }
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0b0b0e; --glow-1: rgba(129,140,248,0.16); --glow-2: rgba(99,102,241,0.09);
+      --surface: rgba(26,26,30,0.66); --surface-solid: #1a1a1e; --tray: rgba(255,255,255,0.035);
+      --fg: #f4f4f5; --muted: #a1a1aa; --faint: #71717a;
+      --border: rgba(255,255,255,0.10); --divider: rgba(255,255,255,0.07); --hover: rgba(255,255,255,0.06);
+      --accent: #a5b4fc; --accent-hi: #c7d2fe; --accent-lo: #818cf8; --on-accent: #0b0b0e;
+      --ring: rgba(165,180,252,0.38); --ok: #34d399; --err: #f87171;
+      --shadow: 0 0 0 .5px rgba(255,255,255,.05), 0 2px 8px rgba(0,0,0,.4), 0 20px 56px rgba(0,0,0,.55);
+      --glass-edge: inset 0 1px 0 rgba(255,255,255,.07);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) {
+        color-scheme: dark;
+        --bg: #0b0b0e; --glow-1: rgba(129,140,248,0.16); --glow-2: rgba(99,102,241,0.09);
+        --surface: rgba(26,26,30,0.66); --surface-solid: #1a1a1e; --tray: rgba(255,255,255,0.035);
+        --fg: #f4f4f5; --muted: #a1a1aa; --faint: #71717a;
+        --border: rgba(255,255,255,0.10); --divider: rgba(255,255,255,0.07); --hover: rgba(255,255,255,0.06);
+        --accent: #a5b4fc; --accent-hi: #c7d2fe; --accent-lo: #818cf8; --on-accent: #0b0b0e;
+        --ring: rgba(165,180,252,0.38); --ok: #34d399; --err: #f87171;
+        --shadow: 0 0 0 .5px rgba(255,255,255,.05), 0 2px 8px rgba(0,0,0,.4), 0 20px 56px rgba(0,0,0,.55);
+        --glass-edge: inset 0 1px 0 rgba(255,255,255,.07);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 52px 22px 88px; color: var(--fg);
+      font-family: var(--sans); font-size: 14px; line-height: 1.6;
+      background:
+        radial-gradient(58vw 50vw at 10% -12%, var(--glow-1), transparent 60%),
+        radial-gradient(44vw 44vw at 104% 110%, var(--glow-2), transparent 55%),
+        var(--bg);
+      background-attachment: fixed;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .035;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");
+    }
+    :root[data-theme="dark"] body::before { opacity: .05; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme]) body::before { opacity: .05; } }
+    ::selection { background: rgba(99, 102, 241, 0.22); }
+
+    .wrap { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; animation: rise .5s var(--spring) both; }
+
+    /* header */
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .brand-badge {
+      width: 42px; height: 42px; border-radius: 13px; flex: none; display: grid; place-items: center;
+      color: #fff;
+      background: linear-gradient(152deg, #818cf8, #6366f1 58%, #4f46e5);
+      box-shadow: 0 3px 10px rgba(79,70,229,.34), inset 0 1px 0 rgba(255,255,255,.45);
+    }
+    .brand-badge svg { width: 22px; height: 22px; }
+    .brand-name { font-size: 20px; font-weight: 600; letter-spacing: -.015em; }
+    .brand-tag { font-family: var(--serif); font-style: italic; color: var(--muted); font-size: 14px; margin-top: 1px; }
+    .sub { color: var(--muted); margin: 16px 0 22px; max-width: 60ch; }
+    .back { color: var(--accent); text-decoration: none; font-size: 13px; }
+    .back:hover { text-decoration: underline; }
+
+    /* card */
+    .card {
+      position: relative; padding: 24px 26px; border-radius: 18px;
+      background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow);
+      -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+    }
+    .card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: var(--glass-edge); }
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .card { background: var(--surface-solid); } }
+
+    /* fields */
+    .fld { margin-bottom: 17px; }
+    .fld:last-of-type { margin-bottom: 0; }
+    .fld > label { display: block; font-size: 13px; color: var(--fg); margin-bottom: 7px; font-weight: 500; }
+    .fld .opt { color: var(--faint); font-weight: 400; font-size: 12px; margin-left: 6px; }
+
+    .ctl {
+      width: 100%; font-family: var(--sans); font-size: 13.5px; color: var(--fg);
+      background: var(--tray); border: 1px solid var(--border); border-radius: 11px; padding: 10px 12px;
+      transition: border-color .16s, box-shadow .16s, background .16s;
+    }
+    .ctl:hover { border-color: color-mix(in srgb, var(--accent) 26%, var(--border)); }
+    .ctl:focus, .ctl:focus-visible {
+      outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); background: var(--surface-solid);
+    }
+    .ctl::placeholder { color: var(--faint); }
+    textarea.ctl { min-height: 112px; resize: vertical; line-height: 1.6; }
+    select.ctl {
+      appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 30px;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+      background-repeat: no-repeat; background-position: right 11px center;
+    }
+    select.ctl option { background: var(--surface-solid); color: var(--fg); }
+
+    /* environment notice */
+    .env {
+      margin-top: 18px; padding: 12px 14px; border-radius: 12px;
+      background: var(--tray); border: 1px solid var(--divider);
+      color: var(--muted); font-size: 12.5px; line-height: 1.6;
+    }
+    .env .env-line { color: var(--fg); font-variant-numeric: tabular-nums; }
+    .env .env-hint { display: block; margin-top: 4px; color: var(--faint); }
+
+    /* actions */
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
+    button {
+      font-family: var(--sans); font-size: 13px; font-weight: 500; line-height: 1;
+      border: 1px solid transparent; border-radius: 11px; padding: 11px 18px; cursor: pointer;
+      color: var(--on-accent); background: linear-gradient(180deg, var(--accent-hi), var(--accent));
+      box-shadow: 0 1px 2px rgba(79,70,229,.34), inset 0 1px 0 rgba(255,255,255,.26);
+      transition: transform .14s var(--spring), box-shadow .18s, background .16s, border-color .16s;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(79,70,229,.36), inset 0 1px 0 rgba(255,255,255,.26); }
+    button:active { transform: translateY(0) scale(.98); }
+    button.ghost { color: var(--fg); background: var(--tray); border-color: var(--border); box-shadow: none; }
+    button.ghost:hover { background: var(--hover); border-color: color-mix(in srgb, var(--accent) 26%, var(--border)); }
+    .status { font-size: 12.5px; color: var(--ok); opacity: 0; transition: opacity .3s var(--spring); margin-left: 2px; }
+    .status.show { opacity: 1; }
+    .status.err { color: var(--err); }
+
+    .note { color: var(--muted); font-size: 12.5px; line-height: 1.6; margin: 16px 0 0; }
+    .note a { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+    .note a:hover { border-bottom-color: var(--accent); }
+
+    /* footer links */
+    .links { margin-top: 20px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; }
+    .links a { color: var(--accent); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .links a:hover { text-decoration: underline; }
+
+    .hidden { display: none !important; }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+    @media (max-width: 560px) { body { padding: 32px 16px 64px; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <span class="brand-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </svg>
+      </span>
+      <div>
+        <div class="brand-name">反馈 / 报告问题</div>
+        <div class="brand-tag">tell us what broke, or what's missing</div>
+      </div>
+    </div>
+    <p class="sub">
+      填写下面的内容，点「提交到 GitHub」会跳转到预填好的新建 issue 页面，确认后即可发布到项目仓库。
+      需要一个 GitHub 账号；不方便登录时，可用「复制内容」把信息粘到别处发给作者。
+    </p>
+
+    <div class="card">
+      <div class="fld">
+        <label for="type">类型</label>
+        <select id="type" class="ctl">
+          <option value="bug">🐛 Bug 报告 — 功能不正常</option>
+          <option value="feature">✨ 功能建议 — 希望增加 / 改进</option>
+          <option value="question">❓ 使用问题 — 不知道怎么用</option>
+          <option value="other">💬 其他反馈</option>
+        </select>
+      </div>
+
+      <div class="fld">
+        <label for="title">标题<span class="opt">选填，留空会自动从描述生成</span></label>
+        <input id="title" class="ctl" type="text" placeholder="一句话概括，例如：DeepL 引擎翻译报错" />
+      </div>
+
+      <div class="fld">
+        <label for="desc">详细描述 <span class="opt">必填</span></label>
+        <textarea id="desc" class="ctl" placeholder="发生了什么？你期望的结果是什么？越具体越好。"></textarea>
+      </div>
+
+      <div class="fld" id="stepsRow">
+        <label for="steps">复现步骤<span class="opt">选填，帮助更快定位</span></label>
+        <textarea id="steps" class="ctl" placeholder="1. 在某网站选中一段文字&#10;2. 点击翻译按钮&#10;3. 卡片显示……"></textarea>
+      </div>
+
+      <div class="fld">
+        <label for="page">出问题的网址<span class="opt">选填；不会自动获取，按需填写</span></label>
+        <input id="page" class="ctl" type="text" placeholder="https://example.com/article" />
+      </div>
+
+      <div class="env">
+        <span class="env-line" id="envLine">环境信息</span>
+        <span class="env-hint">提交时会附上以上环境信息，方便排查问题（不含任何个人数据）。</span>
+      </div>
+
+      <div class="actions">
+        <button id="submit" type="button">提交到 GitHub</button>
+        <button id="copy" class="ghost" type="button">复制内容</button>
+        <span class="status" id="status"></span>
+      </div>
+    </div>
+
+    <div class="links">
+      <a id="issuesLink" href="#" target="_blank" rel="noopener">查看已有 issues</a>
+      <a id="repoLink" href="#" target="_blank" rel="noopener">GitHub 仓库</a>
+      <a class="back" href="options.html">← 返回设置</a>
+    </div>
+  </div>
+
+  <script src="feedback.js"></script>
+</body>
+</html>

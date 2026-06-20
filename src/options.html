@@ -300,6 +300,20 @@
     .btn-ghost { color: var(--fg); background: var(--tray); border-color: var(--border); }
     .btn-ghost:hover { background: var(--hover); border-color: color-mix(in srgb, var(--accent) 26%, var(--border)); }
     .btn-ghost:active { transform: scale(.98); }
+    a.btn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+
+    /* ---- about card ---- */
+    .about-id { display: flex; align-items: center; gap: 13px; }
+    .about-badge {
+      width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center;
+      color: #fff; font-size: 20px; font-weight: 500; font-family: var(--sans);
+      background: linear-gradient(152deg, #818cf8, #6366f1 58%, #4f46e5);
+      box-shadow: 0 3px 10px rgba(79,70,229,.34), inset 0 1px 0 rgba(255,255,255,.45);
+    }
+    .about-name { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+    .about-ver { color: var(--muted); font-size: 12.5px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .about-blurb { max-width: 58ch; margin-top: 15px; }
+    .about-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
 
     /* ---- "try it" inset tray ---- */
     .subpanel {
@@ -375,11 +389,12 @@
         <a href="#sec-model"><span class="n">03</span><span class="t">大模型</span></a>
         <a href="#sec-compare"><span class="n">04</span><span class="t">多引擎对照</span></a>
         <a href="#sec-vocab"><span class="n">05</span><span class="t">生词本</span></a>
+        <a href="#sec-about"><span class="n">06</span><span class="t">关于</span></a>
       </nav>
 
       <div class="rail-foot">
         更改即时保存，并跨设备同步。<br />
-        <span class="ver">Select&nbsp;to&nbsp;Translate · v1.3.0</span>
+        <span class="ver">Select&nbsp;to&nbsp;Translate · v<span id="railVersion">1.4.0</span></span>
       </div>
     </aside>
 
@@ -590,6 +605,45 @@
             <div class="row-l"><label>收藏的词句</label></div>
             <button class="btn btn-ghost" id="openVocab" type="button">打开生词本</button>
           </div>
+        </div>
+      </section>
+
+      <!-- 06 -->
+      <section class="card" id="sec-about">
+        <header class="sec-head">
+          <span class="sec-num">06</span>
+          <div>
+            <span class="sec-kicker">About</span>
+            <h2>关于</h2>
+            <p class="sec-desc">版本信息、开源地址与反馈渠道。</p>
+          </div>
+        </header>
+
+        <div class="rows">
+          <div class="about-id">
+            <span class="about-badge">译</span>
+            <div>
+              <div class="about-name">划词翻译卡片 · Select to Translate</div>
+              <div class="about-ver">版本 <span id="aboutVersion">1.4.0</span> · MIT License</div>
+            </div>
+          </div>
+
+          <p class="note about-blurb">
+            选中网页文字即在原地卡片翻译：多引擎对照、生词本（含间隔复习）与 AI 解释，
+            主打轻量与速度。请求由扩展后台发起、API Key 不暴露给网页，且不收集任何统计或追踪数据。
+          </p>
+
+          <div class="about-actions">
+            <a class="btn btn-primary" href="feedback.html" target="_blank" rel="noopener">反馈 / 报告问题</a>
+            <a class="btn btn-ghost" href="https://github.com/zuoqiumama/translator-browser-plugin" target="_blank" rel="noopener">GitHub 仓库</a>
+            <a class="btn btn-ghost" href="https://github.com/zuoqiumama/translator-browser-plugin/releases" target="_blank" rel="noopener">更新日志</a>
+            <a class="btn btn-ghost" href="https://github.com/zuoqiumama/translator-browser-plugin" target="_blank" rel="noopener">给个 Star ⭐</a>
+          </div>
+
+          <p class="note">
+            遇到问题或有建议？点「反馈 / 报告问题」，填写后会跳转到 GitHub 预填好的新建 issue 页面，确认即可提交。
+            也可直接浏览 <a href="https://github.com/zuoqiumama/translator-browser-plugin/issues" target="_blank" rel="noopener">已有 issues</a>。
+          </p>
         </div>
       </section>
     </main>
